@@ -1,0 +1,1604 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GTO Preflop Trainer - Texas Hold'em</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&family=JetBrains+Mono:wght@400;700&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Noto Sans JP',sans-serif;background:#0d1117;color:#e6edf3;min-height:100vh}
+
+  /* === HEADER === */
+  .header{background:linear-gradient(135deg,#1a1e2e,#2d1f3d);padding:16px 30px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #30363d}
+  .header h1{font-size:22px;font-weight:900;letter-spacing:1px}
+  .header h1 span{color:#58a6ff}
+  .header-stats{display:flex;gap:20px;font-size:13px;color:#8b949e}
+  .header-stats .val{color:#58a6ff;font-weight:700;font-size:15px}
+
+  /* === LAYOUT === */
+  .app{display:flex;height:calc(100vh - 60px)}
+  .sidebar{width:260px;background:#161b22;border-right:1px solid #30363d;padding:20px;overflow-y:auto;flex-shrink:0}
+  .main-content{flex:1;padding:25px;overflow-y:auto;display:flex;flex-direction:column;align-items:center}
+
+  /* === SIDEBAR === */
+  .sidebar h3{font-size:13px;color:#8b949e;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px;margin-top:20px}
+  .sidebar h3:first-child{margin-top:0}
+
+  .mode-tabs{display:flex;flex-direction:column;gap:6px}
+  .mode-tab{padding:10px 14px;border-radius:8px;cursor:pointer;font-size:14px;transition:all .2s;border:1px solid transparent;background:#21262d}
+  .mode-tab:hover{border-color:#30363d;background:#30363d}
+  .mode-tab.active{background:#1f6feb;border-color:#1f6feb;color:#fff}
+
+  .pos-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+  .pos-btn{padding:8px;border-radius:8px;text-align:center;font-size:13px;font-weight:700;cursor:pointer;border:2px solid #30363d;background:#21262d;transition:all .2s;color:#c9d1d9}
+  .pos-btn:hover{border-color:#58a6ff}
+  .pos-btn.active{border-color:#58a6ff;background:rgba(31,111,235,0.2);color:#58a6ff}
+
+  .scenario-list{display:flex;flex-direction:column;gap:5px}
+  .scenario-btn{padding:8px 12px;border-radius:8px;font-size:13px;cursor:pointer;border:1px solid #30363d;background:#21262d;transition:all .2s;text-align:left;color:#c9d1d9}
+  .scenario-btn:hover{border-color:#58a6ff}
+  .scenario-btn.active{border-color:#f0883e;background:rgba(240,136,62,0.15);color:#f0883e}
+
+  .legend{margin-top:15px}
+  .legend-item{display:flex;align-items:center;gap:8px;font-size:12px;margin-bottom:5px;color:#8b949e}
+  .legend-color{width:16px;height:16px;border-radius:4px;flex-shrink:0}
+
+  .settings-group{margin-top:10px}
+  .setting-row{display:flex;align-items:center;justify-content:space-between;font-size:13px;margin-bottom:8px}
+  .toggle{width:40px;height:22px;background:#30363d;border-radius:11px;cursor:pointer;position:relative;transition:background .3s}
+  .toggle.on{background:#238636}
+  .toggle::after{content:'';position:absolute;width:18px;height:18px;background:#fff;border-radius:50%;top:2px;left:2px;transition:left .3s}
+  .toggle.on::after{left:20px}
+
+  /* === QUIZ AREA === */
+  .quiz-container{width:100%;max-width:900px}
+
+  .quiz-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+  .quiz-info{display:flex;gap:15px}
+  .quiz-badge{background:#21262d;padding:6px 14px;border-radius:20px;font-size:13px;border:1px solid #30363d}
+  .quiz-badge .em{color:#58a6ff;font-weight:700}
+
+  /* === TABLE VISUAL === */
+  .table-scene{position:relative;width:600px;height:320px;margin:0 auto 25px}
+  .poker-table{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:480px;height:240px;background:radial-gradient(ellipse,#1a6b3c,#145a30);border-radius:120px;border:12px solid #5c3a1e;box-shadow:0 0 40px rgba(0,0,0,0.5),inset 0 0 30px rgba(0,0,0,0.3)}
+  .table-label{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:rgba(255,255,255,0.15);font-size:20px;font-weight:900;letter-spacing:3px}
+
+  .seat{position:absolute;width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;cursor:pointer;transition:all .3s;border:3px solid transparent}
+  .seat.inactive{background:#21262d;color:#484f58;border-color:#30363d}
+  .seat.hero{background:#1f6feb;color:#fff;border-color:#58a6ff;box-shadow:0 0 15px rgba(31,111,235,0.5);animation:heroGlow 2s ease-in-out infinite}
+  .seat.villain{background:#da3633;color:#fff;border-color:#f85149;box-shadow:0 0 12px rgba(218,54,51,0.4)}
+  .seat.folded{background:#161b22;color:#484f58;border-color:#21262d;opacity:0.5}
+  @keyframes heroGlow{0%,100%{box-shadow:0 0 15px rgba(31,111,235,0.5)}50%{box-shadow:0 0 25px rgba(31,111,235,0.8)}}
+  .seat-label{position:absolute;bottom:-20px;left:50%;transform:translateX(-50%);font-size:10px;color:#8b949e;white-space:nowrap;font-weight:700}
+
+  .pot-display{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) translateY(15px);background:rgba(0,0,0,0.5);padding:4px 14px;border-radius:12px;font-size:12px;color:#f0c040;font-weight:700}
+
+  /* === HAND DISPLAY === */
+  .hand-display{text-align:center;margin-bottom:25px}
+  .hand-label{font-size:13px;color:#8b949e;margin-bottom:10px}
+  .cards{display:flex;gap:12px;justify-content:center}
+  .card{width:80px;height:115px;border-radius:10px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;box-shadow:0 4px 15px rgba(0,0,0,0.3);position:relative;transition:transform .3s}
+  .card:hover{transform:translateY(-5px)}
+  .card .rank{font-size:32px;font-weight:900;line-height:1}
+  .card .suit{font-size:28px;line-height:1;margin-top:2px}
+  .card.hearts,.card.diamonds{color:#e5534b}
+  .card.spades,.card.clubs{color:#1a1e2e}
+  .card .corner{position:absolute;top:6px;left:8px;font-size:11px;font-weight:700;line-height:1.1;text-align:center}
+  .card .corner-br{position:absolute;bottom:6px;right:8px;font-size:11px;font-weight:700;line-height:1.1;text-align:center;transform:rotate(180deg)}
+
+  /* === SITUATION TEXT === */
+  .situation-box{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:18px 24px;margin-bottom:25px;text-align:center;width:100%;max-width:700px}
+  .situation-box .scenario-text{font-size:18px;font-weight:700;margin-bottom:6px}
+  .situation-box .detail-text{font-size:14px;color:#8b949e}
+
+  /* === ACTION BUTTONS === */
+  .action-buttons{display:flex;gap:12px;justify-content:center;margin-bottom:20px;flex-wrap:wrap}
+  .action-btn{padding:14px 32px;border-radius:12px;font-size:16px;font-weight:900;cursor:pointer;border:2px solid transparent;transition:all .2s;font-family:'Noto Sans JP',sans-serif;min-width:120px}
+  .action-btn:hover{transform:translateY(-2px)}
+  .action-btn.fold{background:#21262d;color:#f85149;border-color:#da3633}
+  .action-btn.fold:hover{background:rgba(218,54,51,0.15)}
+  .action-btn.call{background:#21262d;color:#3fb950;border-color:#238636}
+  .action-btn.call:hover{background:rgba(35,134,54,0.15)}
+  .action-btn.raise{background:#21262d;color:#f0883e;border-color:#d29922}
+  .action-btn.raise:hover{background:rgba(210,153,34,0.15)}
+  .action-btn.allin{background:#21262d;color:#f778ba;border-color:#db61a2}
+  .action-btn.allin:hover{background:rgba(219,97,162,0.15)}
+
+  /* === FEEDBACK === */
+  .feedback{text-align:center;padding:18px;border-radius:12px;margin-bottom:20px;display:none;animation:fadeIn .3s}
+  .feedback.correct{display:block;background:rgba(35,134,54,0.15);border:1px solid #238636;color:#3fb950}
+  .feedback.wrong{display:block;background:rgba(218,54,51,0.15);border:1px solid #da3633;color:#f85149}
+  .feedback h3{font-size:20px;margin-bottom:6px}
+  .feedback p{font-size:14px;color:#8b949e}
+  .feedback .correct-answer{color:#58a6ff;font-weight:700}
+
+  /* === ANSWER RANGE CHART === */
+  .answer-range{margin-top:15px;display:flex;flex-direction:column;align-items:center}
+  .answer-range h4{font-size:14px;color:#c9d1d9;margin-bottom:8px;font-weight:700}
+  .answer-range-grid{display:grid;grid-template-columns:repeat(13,1fr);gap:1px;font-family:'JetBrains Mono',monospace;font-size:9px;width:100%;max-width:480px}
+  .answer-range-grid .range-cell{aspect-ratio:1;font-size:8px;border-radius:3px}
+  .answer-range-grid .range-cell.current-hand{outline:3px solid #fff;outline-offset:-1px;z-index:2;transform:scale(1.15)}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+
+  .next-btn{background:#1f6feb;color:#fff;border:none;padding:12px 40px;border-radius:25px;font-size:15px;font-weight:700;cursor:pointer;font-family:'Noto Sans JP',sans-serif;transition:all .3s;display:none}
+  .next-btn:hover{background:#388bfd}
+  .next-btn.show{display:inline-block}
+
+  /* === RANGE CHART === */
+  .range-section{margin-top:30px;width:100%;max-width:900px}
+  .range-section h2{font-size:18px;margin-bottom:15px;color:#c9d1d9}
+  .range-grid{display:grid;grid-template-columns:repeat(13,1fr);gap:2px;font-family:'JetBrains Mono',monospace;font-size:11px;max-width:600px}
+  .range-cell{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:4px;font-weight:700;cursor:pointer;transition:all .2s;position:relative;font-size:10px}
+  .range-cell:hover{transform:scale(1.15);z-index:2}
+  .range-cell.r-raise{background:#d29922;color:#000}
+  .range-cell.r-call{background:#238636;color:#fff}
+  .range-cell.r-3bet{background:#da3633;color:#fff}
+  .range-cell.r-allin{background:#db61a2;color:#fff}
+  .range-cell.r-fold{background:#21262d;color:#484f58}
+  .range-cell.r-mixed{background:linear-gradient(135deg,#d29922 50%,#21262d 50%);color:#000}
+
+  /* === TOOLTIP === */
+  .range-cell .cell-tooltip{display:none;position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:#1a1e2e;border:1px solid #58a6ff;border-radius:8px;padding:8px 12px;font-size:11px;color:#e6edf3;white-space:nowrap;z-index:100;pointer-events:none;box-shadow:0 4px 15px rgba(0,0,0,0.5);font-weight:400;text-align:left;min-width:130px}
+  .range-cell .cell-tooltip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:#58a6ff}
+  .range-cell:hover .cell-tooltip{display:block}
+  .tooltip-bar{height:6px;border-radius:3px;margin-top:4px;overflow:hidden;display:flex}
+  .tooltip-bar-seg{height:100%}
+
+  /* === HAND BREAKDOWN (feedback) === */
+  .hand-breakdown{margin-top:12px;background:rgba(0,0,0,0.2);border-radius:10px;padding:14px 18px;display:inline-block;text-align:left}
+  .hand-breakdown h5{font-size:13px;color:#c9d1d9;margin-bottom:8px;text-align:center}
+  .breakdown-row{display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:13px}
+  .breakdown-color{width:12px;height:12px;border-radius:3px;flex-shrink:0}
+  .breakdown-label{min-width:80px;color:#8b949e}
+  .breakdown-pct{font-weight:900;min-width:45px;text-align:right}
+  .breakdown-bar-wrap{flex:1;min-width:100px;height:8px;background:rgba(255,255,255,0.1);border-radius:4px;overflow:hidden}
+  .breakdown-bar-fill{height:100%;border-radius:4px;transition:width .5s ease}
+  .freq-bar-container{display:flex;height:10px;border-radius:5px;overflow:hidden;margin-top:8px;width:100%;max-width:480px}
+  .freq-bar-seg{height:100%}
+
+  /* === STATS PANEL === */
+  .stats-panel{width:100%;max-width:900px;margin-top:30px;display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  .stat-card{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:18px;text-align:center}
+  .stat-card .stat-val{font-size:28px;font-weight:900;margin-bottom:4px}
+  .stat-card .stat-label{font-size:12px;color:#8b949e}
+  .stat-val.green{color:#3fb950}
+  .stat-val.red{color:#f85149}
+  .stat-val.blue{color:#58a6ff}
+  .stat-val.orange{color:#f0883e}
+
+  /* === HISTORY === */
+  .history-bar{display:flex;gap:3px;justify-content:center;margin-top:15px;flex-wrap:wrap;max-width:900px}
+  .history-dot{width:14px;height:14px;border-radius:3px}
+  .history-dot.h-correct{background:#238636}
+  .history-dot.h-wrong{background:#da3633}
+
+  /* === RANGE VIEW MODE === */
+  .view-mode-toggle{display:flex;gap:8px;margin-bottom:15px}
+  .view-toggle-btn{padding:6px 16px;border-radius:6px;font-size:12px;cursor:pointer;border:1px solid #30363d;background:#21262d;color:#8b949e;font-family:'Noto Sans JP',sans-serif;transition:all .2s}
+  .view-toggle-btn.active{background:#1f6feb;border-color:#1f6feb;color:#fff}
+
+  .hidden{display:none!important}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>♠ GTO <span>Preflop Trainer</span></h1>
+  <div class="header-stats">
+    <span>正解率: <span class="val" id="hAccuracy">0%</span></span>
+    <span>連続正解: <span class="val" id="hStreak">0</span></span>
+    <span>総問題数: <span class="val" id="hTotal">0</span></span>
+  </div>
+</div>
+
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <h3>モード</h3>
+    <div class="mode-tabs">
+      <div class="mode-tab active" onclick="setMode('quiz')">🎯 クイズモード</div>
+      <div class="mode-tab" onclick="setMode('range')">📊 レンジ確認</div>
+    </div>
+
+    <h3>ポジション</h3>
+    <div class="pos-grid">
+      <div class="pos-btn" data-pos="random" onclick="setPosition(this)" style="grid-column:1/-1;background:#1f6feb;color:#fff;border-color:#1f6feb" id="posRandom">🎲 ランダム</div>
+      <div class="pos-btn active" data-pos="UTG" onclick="setPosition(this)">UTG</div>
+      <div class="pos-btn" data-pos="MP" onclick="setPosition(this)">MP</div>
+      <div class="pos-btn" data-pos="CO" onclick="setPosition(this)">CO</div>
+      <div class="pos-btn" data-pos="BTN" onclick="setPosition(this)">BTN</div>
+      <div class="pos-btn" data-pos="SB" onclick="setPosition(this)">SB</div>
+      <div class="pos-btn" data-pos="BB" onclick="setPosition(this)">BB</div>
+    </div>
+
+    <h3>シナリオ</h3>
+    <div class="scenario-list">
+      <div class="scenario-btn" data-sc="random" onclick="setScenario(this)" style="background:#1f6feb;color:#fff;border-color:#1f6feb" id="scRandom">🎲 全シナリオランダム</div>
+      <div class="scenario-btn active" data-sc="rfi" onclick="setScenario(this)">📤 オープンなし (RFI)</div>
+      <div class="scenario-btn" data-sc="vs_raise" onclick="setScenario(this)">🆚 vs オープンレイズ</div>
+      <div class="scenario-btn" data-sc="vs_3bet" onclick="setScenario(this)">💥 vs 3ベット</div>
+      <div class="scenario-btn" data-sc="vs_4bet" onclick="setScenario(this)">🔥 vs 4ベット</div>
+    </div>
+
+    <h3>凡例</h3>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-color" style="background:#d29922"></div>レイズ / オープン</div>
+      <div class="legend-item"><div class="legend-color" style="background:#238636"></div>コール</div>
+      <div class="legend-item"><div class="legend-color" style="background:#da3633"></div>3ベット / リレイズ</div>
+      <div class="legend-item"><div class="legend-color" style="background:#db61a2"></div>オールイン</div>
+      <div class="legend-item"><div class="legend-color" style="background:#21262d;border:1px solid #30363d"></div>フォールド</div>
+      <div class="legend-item"><div class="legend-color" style="background:linear-gradient(135deg,#d29922 50%,#21262d 50%)"></div>ミックス</div>
+    </div>
+
+    <h3>設定</h3>
+    <div class="settings-group">
+      <div class="setting-row">
+        <span>スタック 100BB</span>
+        <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+      </div>
+      <div class="setting-row">
+        <span>6人テーブル</span>
+        <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+      </div>
+      <div class="setting-row">
+        <span>効果音</span>
+        <div class="toggle" id="sfxToggle" onclick="this.classList.toggle('on')"></div>
+      </div>
+    </div>
+
+    <div style="margin-top:20px">
+      <button onclick="resetStats()" style="width:100%;padding:10px;border-radius:8px;background:#21262d;border:1px solid #30363d;color:#f85149;cursor:pointer;font-family:'Noto Sans JP',sans-serif;font-size:13px">📊 統計リセット</button>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main-content">
+
+    <!-- QUIZ MODE -->
+    <div class="quiz-container" id="quizMode">
+
+      <!-- TABLE -->
+      <div class="table-scene">
+        <div class="poker-table">
+          <div class="table-label">PREFLOP</div>
+        </div>
+        <div class="seat" id="seatUTG" style="bottom:10px;left:60px"><span>UTG</span><div class="seat-label">UTG</div></div>
+        <div class="seat" id="seatMP" style="top:10px;left:80px"><span>MP</span><div class="seat-label">MP</div></div>
+        <div class="seat" id="seatCO" style="top:10px;left:250px"><span>CO</span><div class="seat-label">CO</div></div>
+        <div class="seat" id="seatBTN" style="top:10px;right:80px"><span>BTN</span><div class="seat-label">BTN</div></div>
+        <div class="seat" id="seatSB" style="bottom:10px;right:60px"><span>SB</span><div class="seat-label">SB</div></div>
+        <div class="seat" id="seatBB" style="bottom:10px;right:200px"><span>BB</span><div class="seat-label">BB</div></div>
+        <div class="pot-display" id="potDisplay">Pot: 1.5BB</div>
+      </div>
+
+      <!-- HAND -->
+      <div class="hand-display">
+        <div class="hand-label">あなたのハンド</div>
+        <div class="cards" id="heroCards"></div>
+      </div>
+
+      <!-- SITUATION -->
+      <div class="situation-box">
+        <div class="scenario-text" id="scenarioText">あなたはUTGです。アクションは？</div>
+        <div class="detail-text" id="scenarioDetail">全員フォールド - 100BBスタック - 6max</div>
+      </div>
+
+      <!-- ACTIONS -->
+      <div class="action-buttons" id="actionButtons"></div>
+
+      <!-- FEEDBACK -->
+      <div class="feedback" id="feedback">
+        <h3 id="feedbackTitle"></h3>
+        <p id="feedbackText"></p>
+        <div class="hand-breakdown" id="handBreakdown"></div>
+        <div class="answer-range" id="answerRange">
+          <h4 id="answerRangeTitle"></h4>
+          <div class="answer-range-grid" id="answerRangeGrid"></div>
+          <div class="freq-bar-container" id="answerFreqBar"></div>
+        </div>
+      </div>
+
+      <div style="text-align:center">
+        <button class="next-btn" id="nextBtn" onclick="nextQuestion()">次の問題 →</button>
+      </div>
+
+      <!-- STATS -->
+      <div class="stats-panel">
+        <div class="stat-card"><div class="stat-val green" id="sCorrect">0</div><div class="stat-label">正解</div></div>
+        <div class="stat-card"><div class="stat-val red" id="sWrong">0</div><div class="stat-label">不正解</div></div>
+        <div class="stat-card"><div class="stat-val blue" id="sAccuracy">0%</div><div class="stat-label">正解率</div></div>
+        <div class="stat-card"><div class="stat-val orange" id="sBestStreak">0</div><div class="stat-label">最高連続正解</div></div>
+      </div>
+
+      <div class="history-bar" id="historyBar"></div>
+    </div>
+
+    <!-- RANGE VIEW MODE -->
+    <div class="quiz-container hidden" id="rangeMode">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px">
+        <h2 style="font-size:18px" id="rangeTitle">UTG オープンレイズ レンジ</h2>
+        <div class="view-mode-toggle">
+          <div class="view-toggle-btn active" onclick="setRangeView(this,'grid')">グリッド</div>
+          <div class="view-toggle-btn" onclick="setRangeView(this,'list')">リスト</div>
+        </div>
+      </div>
+      <p style="font-size:13px;color:#8b949e;margin-bottom:15px" id="rangeDesc"></p>
+      <div class="range-grid" id="rangeGrid"></div>
+      <div id="rangeList" class="hidden" style="margin-top:15px"></div>
+      <div style="margin-top:20px;font-size:13px;color:#8b949e" id="rangeStats"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===================================================
+// GTO PREFLOP RANGES (simplified, 6-max, 100BB)
+// Actions: R=Raise/Open, C=Call, 3=3bet, F=Fold, A=AllIn, M=Mixed(Raise/Fold)
+// ===================================================
+const RANKS = ['A','K','Q','J','T','9','8','7','6','5','4','3','2'];
+
+// Range definition helper: 13x13 matrix, row=first rank, col=second rank
+// Upper-right = suited, lower-left = offsuit, diagonal = pairs
+function makeRange(str) {
+  // str is a 169-char string, row by row
+  const m = [];
+  for (let i = 0; i < 13; i++) m.push(str.substring(i*13, (i+1)*13).split(''));
+  return m;
+}
+
+// Parse standard poker range notation (e.g. "66+,A3s+,KTs+,T9s,ATo+") into 13x13 grid
+// raises = hands to mark R, mixes = hands to mark M (mixed)
+function parseRangeToGrid(raises, mixes) {
+  const g = Array.from({length:13}, () => Array(13).fill('F'));
+  const ri = c => RANKS.indexOf(c);
+  function apply(str, val) {
+    str.split(',').forEach(p => {
+      p = p.trim(); if (!p) return;
+      const plus = p.endsWith('+');
+      if (plus) p = p.slice(0,-1);
+      if (p.length >= 2 && p[0] === p[1]) {
+        if (plus) { for (let i = 0; i <= ri(p[0]); i++) g[i][i] = val; }
+        else g[ri(p[0])][ri(p[0])] = val;
+        return;
+      }
+      const r1 = ri(p[0]), r2 = ri(p[1]), s = p[2] === 's';
+      if (plus) {
+        if (s) { for (let c = r1+1; c <= r2; c++) g[r1][c] = val; }
+        else { for (let r = r1+1; r <= r2; r++) g[r][r1] = val; }
+      } else {
+        if (s) g[r1][r2] = val; else g[r2][r1] = val;
+      }
+    });
+  }
+  apply(raises, 'R');
+  if (mixes) apply(mixes, 'M');
+  return g;
+}
+
+const RANGES = {
+  // ===== RFI (Raise First In) =====
+  // Source: PokerCoaching.com Implementable GTO Charts (6-max, 100BB, 2.5bb open)
+  rfi: {
+    // UTG ~17%: 66+, A3s+, K8s+, Q9s+, J9s+, T9s, ATo+, KJo+, QJo
+    UTG: parseRangeToGrid(
+      '66+,A3s+,K8s+,Q9s+,J9s+,T9s,ATo+,KJo+,QJo',
+      '55,A2s,K7s,Q8s,J8s,T8s,A9o,KTo'
+    ),
+    // MP ~21%: 55+, A2s+, K6s+, Q9s+, J9s+, T9s, 98s, 87s, 76s, ATo+, KTo+, QTo+
+    MP: parseRangeToGrid(
+      '55+,A2s+,K6s+,Q9s+,J9s+,T9s,98s,87s,76s,ATo+,KTo+,QTo+',
+      '44,K5s,Q8s,J8s,T8s,65s,A9o,K9o,Q9o'
+    ),
+    // CO ~28%: 33+, A2s+, K3s+, Q6s+, J8s+, T7s+, 97s+, 87s, 76s, A8o+, KTo+, QTo+, JTo
+    CO: parseRangeToGrid(
+      '33+,A2s+,K3s+,Q6s+,J8s+,T7s+,97s+,87s,76s,A8o+,KTo+,QTo+,JTo',
+      '22,K2s,Q5s,J7s,T6s,96s,65s,A7o,K9o,Q9o,J9o'
+    ),
+    // BTN ~44%: 33+, A2s+, K2s+, Q3s+, J4s+, T6s+, 96s+, 85s+, 75s+, 64s+, 53s+, A4o+, K8o+, Q9o+, J9o+, T8o+, 98o
+    BTN: parseRangeToGrid(
+      '33+,A2s+,K2s+,Q3s+,J4s+,T6s+,96s+,85s+,75s+,64s+,53s+,A4o+,K8o+,Q9o+,J9o+,T8o+,98o',
+      '22,Q2s,J3s,T5s,95s,84s,74s,63s,52s,43s,A3o,K7o,Q8o,J8o,T7o,97o,87o'
+    ),
+    // SB ~52%: 22+, A2s+, K2s+, Q2s+, J2s+, T3s+, 94s+, 84s+, 74s+, 63s+, 53s+, 43s
+    //          A2o+, K4o+, Q5o+, J7o+, T7o+, 96o+, 86o+, 76o (raise-or-fold vs BB)
+    SB: parseRangeToGrid(
+      '22+,A2s+,K2s+,Q2s+,J2s+,T3s+,94s+,84s+,74s+,63s+,53s+,43s,A2o+,K4o+,Q5o+,J7o+,T7o+,96o+,86o+,76o',
+      'T2s,93s,83s,73s,62s,42s,K3o,Q4o,J6o,T6o,95o,85o,75o,65o'
+    ),
+    // BB: never RFI (defends vs raises in vs_raise scenario)
+    BB: makeRange(
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF"
+    ),
+  },
+
+  // ===== vs Open Raise =====
+  vs_raise: {
+    UTG: makeRange(
+      "3333FFFFFFFFF" +
+      "33333FFFFFFFF" +
+      "F3333FFFFFFFF" +
+      "FF333FFFFFFFFF" .substring(0,13) +
+      "FFF33FFFFFFFFF" .substring(0,13) +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF"
+    ),
+    MP: makeRange(
+      "333CFCFFFFFFFF" .substring(0,13) +
+      "3333CFFFFFFFFF" .substring(0,13) +
+      "C333CCFFFFFFFF" .substring(0,13) +
+      "FC33CCFFFFFFFF" .substring(0,13) +
+      "FFFC3CFFFFFFFF" .substring(0,13) +
+      "FFFFF3FFFFFFFF" .substring(0,13) +
+      "FFFFFF3FFFFFFFF".substring(0,13) +
+      "FFFFFFFCFFFFFF" .substring(0,13) +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF"
+    ),
+    CO: makeRange(
+      "333CCCFFFFFFF" +
+      "3333CCFFFFFFF" +
+      "C3333CFFFFFFF" +
+      "CC333CCFFFFFF" +
+      "CCCC3CCFFFFFF" +
+      "FFFFF3CFFFFFF" +
+      "FFFFFF3FFFFFF" +
+      "FFFFFFFCFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF"
+    ),
+    BTN: makeRange(
+      "333CCCCCFFFFF" +
+      "3333CCCCCFFFF" +
+      "C333CCCCFFFFF" +
+      "CC33CCCCFFFFF" +
+      "CCCC3CCCFFFFF" +
+      "FCCCC3CCFFFFF" +
+      "FFCCFF3CCFFFF" +
+      "FFFCFFFC CFFF".replace(/ /g,'') +
+      "FFFFFFFFCFFFF" .substring(0,13) +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF"
+    ),
+    SB: makeRange(
+      "333CCCCCMFFFF" +
+      "3333CCCCFFFFF" +
+      "C333CCCFFFFFF" +
+      "CC33CCCCFFFFF" +
+      "CCCC3CCCFFFFF" +
+      "FCCFC3CCFFFFF" +
+      "FFCFFF3CFFFFFF".substring(0,13) +
+      "FFFFFFFF CFFF".replace(/ /g,'').substring(0,13) +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF"
+    ),
+    BB: makeRange(
+      "333CCCCCCCCCF" +
+      "3333CCCCCCCFF" +
+      "C333CCCCCCFFF" +
+      "CC33CCCCCFFFF" +
+      "CCCC3CCCCFFFF" +
+      "CCCCC3CCCFFFF" +
+      "FCCCCF3CCFFFF" +
+      "FFCCCFF3CFFFF" +
+      "FFFCCFFFCFFFF" .substring(0,13) +
+      "FFFFCFFFFCFFF" .substring(0,13) +
+      "FFFFFCFFFFC FF".replace(/ /g,'').substring(0,13) +
+      "FFFFFFCFFFFCF" .substring(0,13) +
+      "FFFFFFFCFFFFC" .substring(0,13)
+    ),
+  },
+
+  // ===== vs 3-Bet =====
+  vs_3bet: {
+    UTG: makeRange(
+      "CCCCFFFFFFFFFFF" .substring(0,13) +
+      "3CCCCFFFFFFFFFF" .substring(0,13) +
+      "FFCCFFFFFFFFFFF" .substring(0,13) +
+      "FFFCCFFFFFFFFFF" .substring(0,13) +
+      "FFFFCFFFFFFFFFF" .substring(0,13) +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF"
+    ),
+    MP: makeRange(
+      "CCCCCFFFFFFFFFF" .substring(0,13) +
+      "3CCCCCFFFFFFFF" .substring(0,13) +
+      "FFCCCFFFFFFFFFF" .substring(0,13) +
+      "FFFCCFFFFFFFFFFFF".substring(0,13) +
+      "FFFFCCFFFFFFFFFFF".substring(0,13) +
+      "FFFFFCFFFFFFFFFFF".substring(0,13) +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF"
+    ),
+    CO: makeRange(
+      "3CCCCCCFFFFFFFF" .substring(0,13) +
+      "33CCCCFFFFFFFFF" .substring(0,13) +
+      "FC3CCCFFFFFFFFF" .substring(0,13) +
+      "FFC3CCFFFFFFFFF" .substring(0,13) +
+      "FFFF3CFFFFFFFFF" .substring(0,13) +
+      "FFFFF3FFFFFFFFF" .substring(0,13) +
+      "FFFFFF3FFFFFFFF" .substring(0,13) +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF"
+    ),
+    BTN: makeRange(
+      "3CCCCCCCFFFFF" +
+      "33CCCCCFFFFFF" +
+      "FC3CCCCFFFFFF" +
+      "FFC3CCCFFFFFF" +
+      "CFFF3CCFFFFFF" +
+      "FFFFF3CFFFFFF" +
+      "FFFFFF3FFFFFF" +
+      "FFFFFFFCFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFCFFFF" .substring(0,13) +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF"
+    ),
+    SB: makeRange(
+      "3CCCCCCCFFFFF" +
+      "33CCCCFFFFFFF" +
+      "FC3CCCFFFFFFF" +
+      "FFC3CCFFFFFFF" +
+      "CFFF3CFFFFFFF" +
+      "FFFFF3FFFFFFF" +
+      "FFFFFF3FFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF"
+    ),
+    BB: makeRange(
+      "3CCCCCCCFFFFF" +
+      "33CCCCCCFFFFF" +
+      "CC3CCCFFFFFFF" +
+      "FCC3CCFFFFFFF" +
+      "CCFF3CFFFFFFF" +
+      "FFFFF3CFFFFFF" +
+      "FFFFFF3FFFFFF" +
+      "FFFFFFFCFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF"
+    ),
+  },
+
+  // ===== vs 4-Bet (you 3bet, villain 4bets) =====
+  vs_4bet: {
+    UTG: makeRange(
+      "ACFFFFFFFFFFF" +
+      "FACFFFFFFFFFF" +
+      "FFCFFFFFFFFFFF" .substring(0,13) +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFCF" .substring(0,13) +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF"
+    ),
+    MP: makeRange(
+      "ACFFFFFFFFFFF" +
+      "FACFFFFFFFFFF" +
+      "FFCFFFFFFFFFFF" .substring(0,13) +
+      "FFFCFFFFFFFFF" +
+      "FFFFCFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF"
+    ),
+    CO: makeRange(
+      "ACCFFFFFFFFFFF" .substring(0,13) +
+      "AACFFFFFFFFFFF" .substring(0,13) +
+      "FFCFFFFFFFFFFF" .substring(0,13) +
+      "FFFCFFFFFFFFFFF".substring(0,13) +
+      "FFFFCFFFFFFFFFFF".substring(0,13) +
+      "FFFFFCFFFFFFFFFFF".substring(0,13) +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF"
+    ),
+    BTN: makeRange(
+      "ACCCFFFFFFFFFFF" .substring(0,13) +
+      "AACCFFFFFFFFFFF" .substring(0,13) +
+      "CFCCFFFFFFFFFFF" .substring(0,13) +
+      "FFFCFFFFFFFFFFF" .substring(0,13) +
+      "CFFFCFFFFFFFFFFF".substring(0,13) +
+      "FFFFFCFFFFFFFFFFF".substring(0,13) +
+      "FFFFFFCFFFFFFFFFFF".substring(0,13) +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFCFFF" .substring(0,13) +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF"
+    ),
+    SB: makeRange(
+      "ACCCFFFFFFFFFFF" .substring(0,13) +
+      "AACCFFFFFFFFFFF" .substring(0,13) +
+      "CFCCFFFFFFFFFFF" .substring(0,13) +
+      "FFFCFFFFFFFFFFF" .substring(0,13) +
+      "CFFFCFFFFFFFFFFF".substring(0,13) +
+      "FFFFFCFFFFFFFFFFF".substring(0,13) +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF"
+    ),
+    BB: makeRange(
+      "ACCCFFFFFFFFFFF" .substring(0,13) +
+      "AACCFFFFFFFFFFF" .substring(0,13) +
+      "CCCCFFFFFFFFFFF" .substring(0,13) +
+      "FCCCFFFFFFFFFFF" .substring(0,13) +
+      "CCFFCFFFFFFFFFFF".substring(0,13) +
+      "FFFFFCFFFFFFFFFFF".substring(0,13) +
+      "FFFFFFCFFFFFFFFFFF".substring(0,13) +
+      "FFFFFFFCFFFFFFFFFFF".substring(0,13) +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF" +
+      "FFFFFFFFFFFFF"
+    ),
+  }
+};
+
+// ===================================================
+// FREQUENCY DATA: Mixed strategy percentages
+// Key: "scenario:pos:r:c" → {R:%, C:%, 3:%, F:%, A:%}
+// Only boundary hands with non-pure actions are listed.
+// Unlisted hands use pure action from RANGES.
+// ===================================================
+const FREQ = {};
+
+function setFreq(scenario, pos, r, c, freqs) {
+  FREQ[`${scenario}:${pos}:${r}:${c}`] = freqs;
+}
+
+// Helper to get freq for a hand
+function getFreq(scenario, pos, r, c) {
+  const key = `${scenario}:${pos}:${r}:${c}`;
+  if (FREQ[key]) return FREQ[key];
+  // Pure action from range
+  const act = getAction(pos, scenario, r, c);
+  if (act === 'R') return {R:100,F:0};
+  if (act === 'C') return {C:100,F:0};
+  if (act === '3') return {'3':100,F:0};
+  if (act === 'A') return {A:100,F:0};
+  if (act === 'M') return {R:50,F:50};
+  return {F:100};
+}
+
+// ---- RFI UTG (~17%) - PokerCoaching GTO ----
+// Boundary hands (marked M in grid)
+setFreq('rfi','UTG',9,9,{R:60,F:40});    // 55
+setFreq('rfi','UTG',0,12,{R:40,F:60});   // A2s
+setFreq('rfi','UTG',1,7,{R:45,F:55});    // K7s
+setFreq('rfi','UTG',2,6,{R:35,F:65});    // Q8s
+setFreq('rfi','UTG',3,6,{R:30,F:70});    // J8s
+setFreq('rfi','UTG',4,6,{R:25,F:75});    // T8s
+setFreq('rfi','UTG',5,0,{R:55,F:45});    // A9o
+setFreq('rfi','UTG',4,1,{R:40,F:60});    // KTo
+
+// ---- RFI MP (~21%) - PokerCoaching GTO ----
+setFreq('rfi','MP',10,10,{R:55,F:45});   // 44
+setFreq('rfi','MP',1,9,{R:40,F:60});     // K5s
+setFreq('rfi','MP',2,6,{R:45,F:55});     // Q8s
+setFreq('rfi','MP',3,6,{R:40,F:60});     // J8s
+setFreq('rfi','MP',4,6,{R:35,F:65});     // T8s
+setFreq('rfi','MP',8,9,{R:45,F:55});     // 65s
+setFreq('rfi','MP',5,0,{R:65,F:35});     // A9o
+setFreq('rfi','MP',5,1,{R:40,F:60});     // K9o
+setFreq('rfi','MP',5,2,{R:35,F:65});     // Q9o
+
+// ---- RFI CO (~28%) - PokerCoaching GTO ----
+setFreq('rfi','CO',12,12,{R:55,F:45});   // 22
+setFreq('rfi','CO',1,12,{R:40,F:60});    // K2s
+setFreq('rfi','CO',2,9,{R:45,F:55});     // Q5s
+setFreq('rfi','CO',3,7,{R:40,F:60});     // J7s
+setFreq('rfi','CO',4,8,{R:40,F:60});     // T6s
+setFreq('rfi','CO',5,8,{R:35,F:65});     // 96s
+setFreq('rfi','CO',8,9,{R:50,F:50});     // 65s
+setFreq('rfi','CO',7,0,{R:55,F:45});     // A7o
+setFreq('rfi','CO',5,1,{R:50,F:50});     // K9o
+setFreq('rfi','CO',5,2,{R:45,F:55});     // Q9o
+setFreq('rfi','CO',5,3,{R:35,F:65});     // J9o
+
+// ---- RFI BTN (~44%) - PokerCoaching GTO ----
+setFreq('rfi','BTN',12,12,{R:65,F:35});  // 22
+setFreq('rfi','BTN',2,12,{R:45,F:55});   // Q2s
+setFreq('rfi','BTN',3,11,{R:40,F:60});   // J3s
+setFreq('rfi','BTN',4,9,{R:40,F:60});    // T5s
+setFreq('rfi','BTN',5,9,{R:35,F:65});    // 95s
+setFreq('rfi','BTN',6,10,{R:35,F:65});   // 84s
+setFreq('rfi','BTN',7,10,{R:30,F:70});   // 74s
+setFreq('rfi','BTN',8,11,{R:35,F:65});   // 63s
+setFreq('rfi','BTN',9,12,{R:30,F:70});   // 52s
+setFreq('rfi','BTN',10,11,{R:40,F:60});  // 43s
+setFreq('rfi','BTN',11,0,{R:55,F:45});   // A3o
+setFreq('rfi','BTN',7,1,{R:50,F:50});    // K7o
+setFreq('rfi','BTN',6,2,{R:45,F:55});    // Q8o
+setFreq('rfi','BTN',6,3,{R:40,F:60});    // J8o
+setFreq('rfi','BTN',7,4,{R:35,F:65});    // T7o
+setFreq('rfi','BTN',7,5,{R:30,F:70});    // 97o
+setFreq('rfi','BTN',7,6,{R:35,F:65});    // 87o
+
+// ---- RFI SB (~52%, raise-or-fold vs BB) - PokerCoaching GTO ----
+setFreq('rfi','SB',4,12,{R:40,F:60});    // T2s
+setFreq('rfi','SB',5,11,{R:35,F:65});    // 93s
+setFreq('rfi','SB',6,11,{R:35,F:65});    // 83s
+setFreq('rfi','SB',7,11,{R:30,F:70});    // 73s
+setFreq('rfi','SB',8,12,{R:30,F:70});    // 62s
+setFreq('rfi','SB',10,12,{R:35,F:65});   // 42s
+setFreq('rfi','SB',11,1,{R:50,F:50});    // K3o
+setFreq('rfi','SB',10,2,{R:45,F:55});    // Q4o
+setFreq('rfi','SB',8,3,{R:40,F:60});     // J6o
+setFreq('rfi','SB',8,4,{R:40,F:60});     // T6o
+setFreq('rfi','SB',9,5,{R:35,F:65});     // 95o
+setFreq('rfi','SB',9,6,{R:35,F:65});     // 85o
+setFreq('rfi','SB',9,7,{R:30,F:70});     // 75o
+setFreq('rfi','SB',9,8,{R:35,F:65});     // 65o
+
+// ---- vs Raise: BB (wide defend) ----
+setFreq('vs_raise','BB',0,8,{C:70,'3':10,F:20});  // A6s
+setFreq('vs_raise','BB',0,9,{C:55,'3':15,F:30});  // A5s
+setFreq('vs_raise','BB',0,10,{C:40,F:60});         // A4s
+setFreq('vs_raise','BB',1,7,{C:55,F:45});          // K7s
+setFreq('vs_raise','BB',1,8,{C:45,F:55});          // K6s
+setFreq('vs_raise','BB',2,7,{C:40,F:60});          // Q7s
+setFreq('vs_raise','BB',3,6,{C:35,F:65});          // J8s
+setFreq('vs_raise','BB',4,6,{C:50,F:50});          // T8s
+setFreq('vs_raise','BB',5,7,{C:40,F:60});          // 97s
+setFreq('vs_raise','BB',6,8,{C:35,F:65});          // 86s
+setFreq('vs_raise','BB',7,9,{C:30,F:70});          // 75s
+setFreq('vs_raise','BB',7,7,{C:55,F:45});          // 77
+setFreq('vs_raise','BB',8,8,{C:65,F:35});          // 66
+setFreq('vs_raise','BB',9,9,{C:60,F:40});          // 55
+setFreq('vs_raise','BB',10,10,{C:50,F:50});        // 44
+setFreq('vs_raise','BB',11,11,{C:40,F:60});        // 33
+setFreq('vs_raise','BB',12,12,{C:35,F:65});        // 22
+setFreq('vs_raise','BB',4,0,{C:50,'3':20,F:30});   // ATo
+setFreq('vs_raise','BB',5,0,{C:45,F:55});          // A9o
+setFreq('vs_raise','BB',6,0,{C:30,F:70});          // A8o
+setFreq('vs_raise','BB',4,1,{C:50,F:50});          // KTo
+setFreq('vs_raise','BB',5,1,{C:35,F:65});          // K9o
+setFreq('vs_raise','BB',4,2,{C:45,F:55});          // QTo
+setFreq('vs_raise','BB',5,3,{C:40,F:60});          // J9o
+setFreq('vs_raise','BB',5,4,{C:50,F:50});          // T9o
+
+// ---- vs Raise: BTN ----
+setFreq('vs_raise','BTN',0,4,{C:40,'3':30,F:30});  // ATs
+setFreq('vs_raise','BTN',0,5,{C:55,'3':15,F:30});  // A9s
+setFreq('vs_raise','BTN',0,6,{C:45,F:55});          // A8s
+setFreq('vs_raise','BTN',0,7,{C:35,F:65});          // A7s
+setFreq('vs_raise','BTN',1,4,{C:45,'3':15,F:40});  // KTs
+setFreq('vs_raise','BTN',1,5,{C:50,F:50});          // K9s
+setFreq('vs_raise','BTN',2,5,{C:45,F:55});          // Q9s
+setFreq('vs_raise','BTN',3,5,{C:40,F:60});          // J9s
+setFreq('vs_raise','BTN',4,6,{C:45,F:55});          // T8s
+setFreq('vs_raise','BTN',5,7,{C:35,F:65});          // 97s
+setFreq('vs_raise','BTN',6,6,{'3':25,C:40,F:35});   // 88
+setFreq('vs_raise','BTN',7,7,{C:50,F:50});          // 77
+setFreq('vs_raise','BTN',8,8,{C:60,F:40});          // 66
+
+// ---- vs Raise: CO ----
+setFreq('vs_raise','CO',0,3,{C:35,'3':40,F:25});   // AJs
+setFreq('vs_raise','CO',0,4,{C:50,'3':20,F:30});   // ATs
+setFreq('vs_raise','CO',0,5,{C:45,F:55});           // A9s
+setFreq('vs_raise','CO',1,4,{C:50,F:50});           // KTs
+setFreq('vs_raise','CO',1,5,{C:40,F:60});           // K9s
+setFreq('vs_raise','CO',2,5,{C:35,F:65});           // Q9s
+setFreq('vs_raise','CO',4,5,{C:45,F:55});           // T9s
+setFreq('vs_raise','CO',6,6,{C:50,'3':15,F:35});   // 88
+setFreq('vs_raise','CO',7,7,{C:45,F:55});           // 77
+
+// ---- vs 3Bet: BTN vs 3bet ----
+setFreq('vs_3bet','BTN',0,1,{C:40,'3':35,F:25});   // AKs
+setFreq('vs_3bet','BTN',0,4,{C:55,F:45});          // ATs
+setFreq('vs_3bet','BTN',0,5,{C:45,F:55});          // A9s
+setFreq('vs_3bet','BTN',0,6,{C:35,F:65});          // A8s
+setFreq('vs_3bet','BTN',0,7,{C:30,F:70});          // A7s
+setFreq('vs_3bet','BTN',1,2,{C:50,F:50});          // KQs
+setFreq('vs_3bet','BTN',1,3,{C:40,F:60});          // KJs
+setFreq('vs_3bet','BTN',1,4,{C:35,F:65});          // KTs
+setFreq('vs_3bet','BTN',2,3,{C:40,F:60});          // QJs
+setFreq('vs_3bet','BTN',2,4,{C:30,F:70});          // QTs
+setFreq('vs_3bet','BTN',3,4,{C:45,F:55});          // JTs
+setFreq('vs_3bet','BTN',4,5,{C:35,F:65});          // T9s
+setFreq('vs_3bet','BTN',4,4,{C:55,'3':15,F:30});   // TT
+setFreq('vs_3bet','BTN',5,5,{C:60,F:40});          // 99
+setFreq('vs_3bet','BTN',6,6,{C:50,F:50});          // 88
+setFreq('vs_3bet','BTN',7,7,{C:40,F:60});          // 77
+setFreq('vs_3bet','BTN',1,0,{C:35,'3':30,F:35});   // AKo
+setFreq('vs_3bet','BTN',2,0,{C:45,F:55});          // AQo
+setFreq('vs_3bet','BTN',3,0,{C:35,F:65});          // AJo
+
+// ---- vs 3Bet: UTG vs 3bet ----
+setFreq('vs_3bet','UTG',0,1,{'3':45,C:40,F:15});  // AKs → 4bet or call
+setFreq('vs_3bet','UTG',0,2,{C:55,F:45});          // AQs
+setFreq('vs_3bet','UTG',0,3,{C:40,F:60});          // AJs
+setFreq('vs_3bet','UTG',1,2,{C:45,F:55});          // KQs
+setFreq('vs_3bet','UTG',2,2,{C:55,F:45});          // QQ
+setFreq('vs_3bet','UTG',3,3,{C:60,F:40});          // JJ
+setFreq('vs_3bet','UTG',4,4,{C:50,F:50});          // TT
+
+// ---- vs 4Bet ----
+setFreq('vs_4bet','BTN',0,0,{A:100});              // AA
+setFreq('vs_4bet','BTN',0,1,{A:55,C:30,F:15});     // AKs
+setFreq('vs_4bet','BTN',0,2,{C:50,F:50});           // AQs
+setFreq('vs_4bet','BTN',0,3,{C:35,F:65});           // AJs
+setFreq('vs_4bet','BTN',1,1,{A:100});               // KK
+setFreq('vs_4bet','BTN',1,0,{A:50,C:30,F:20});      // AKo
+setFreq('vs_4bet','BTN',2,2,{A:55,C:35,F:10});      // QQ
+setFreq('vs_4bet','BTN',3,3,{C:55,A:20,F:25});      // JJ
+setFreq('vs_4bet','BTN',4,4,{C:45,F:55});           // TT
+setFreq('vs_4bet','BTN',5,5,{C:35,F:65});           // 99
+setFreq('vs_4bet','BTN',6,6,{C:25,F:75});           // 88
+setFreq('vs_4bet','BTN',9,9,{C:20,F:80});           // 55 (blocker)
+setFreq('vs_4bet','CO',0,0,{A:100});
+setFreq('vs_4bet','CO',1,1,{A:100});
+setFreq('vs_4bet','CO',0,1,{A:60,C:30,F:10});
+setFreq('vs_4bet','CO',0,2,{C:50,F:50});
+setFreq('vs_4bet','CO',2,2,{A:50,C:40,F:10});
+setFreq('vs_4bet','CO',3,3,{C:55,F:45});
+setFreq('vs_4bet','CO',4,4,{C:40,F:60});
+setFreq('vs_4bet','CO',5,5,{C:30,F:70});
+setFreq('vs_4bet','UTG',0,0,{A:100});
+setFreq('vs_4bet','UTG',1,1,{A:100});
+setFreq('vs_4bet','UTG',0,1,{A:70,C:30});
+setFreq('vs_4bet','UTG',1,0,{A:45,C:25,F:30});
+setFreq('vs_4bet','UTG',2,2,{C:60,A:30,F:10});
+
+// ===== STATE =====
+let mode = 'quiz';
+let currentPos = 'UTG';
+let randomPos = false;
+let randomScenario = false;
+let currentScenario = 'rfi';
+let currentHand = null;
+let correctAction = null;
+let answered = false;
+let stats = JSON.parse(localStorage.getItem('gtoStats') || '{"correct":0,"wrong":0,"streak":0,"bestStreak":0,"history":[]}');
+
+const SUITS = ['♠','♥','♦','♣'];
+const SUIT_CLASSES = {'♠':'spades','♥':'hearts','♦':'diamonds','♣':'clubs'};
+const ACTION_LABELS = {R:'レイズ',C:'コール',F:'フォールド','3':'3ベット',A:'オールイン',M:'レイズ'};
+const ACTION_CLASSES = {R:'raise',C:'call',F:'fold','3':'raise',A:'allin',M:'raise'};
+
+// ===== INIT =====
+updateStats();
+nextQuestion();
+
+// ===== FUNCTIONS =====
+function setMode(m) {
+  mode = m;
+  document.querySelectorAll('.mode-tab').forEach((t,i) => t.classList.toggle('active', (i===0&&m==='quiz')||(i===1&&m==='range')));
+  document.getElementById('quizMode').classList.toggle('hidden', m !== 'quiz');
+  document.getElementById('rangeMode').classList.toggle('hidden', m !== 'range');
+  if (m === 'range') renderRangeChart();
+  if (m === 'quiz') nextQuestion();
+}
+
+function setPosition(el) {
+  document.querySelectorAll('.pos-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  if (el.dataset.pos === 'random') {
+    randomPos = true;
+  } else {
+    randomPos = false;
+    currentPos = el.dataset.pos;
+  }
+  if (mode === 'quiz') nextQuestion();
+  else renderRangeChart();
+}
+
+function setScenario(el) {
+  document.querySelectorAll('.scenario-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  if (el.dataset.sc === 'random') {
+    randomScenario = true;
+  } else {
+    randomScenario = false;
+    currentScenario = el.dataset.sc;
+  }
+  if (mode === 'quiz') nextQuestion();
+  else renderRangeChart();
+}
+
+function getHandName(r, c) {
+  if (r === c) return RANKS[r] + RANKS[c];
+  if (c > r) return RANKS[r] + RANKS[c] + 's'; // suited
+  return RANKS[c] + RANKS[r] + 'o'; // offsuit
+}
+
+function getAction(pos, scenario, r, c) {
+  const range = RANGES[scenario]?.[pos];
+  if (!range) return 'F';
+  if (r >= 13 || c >= 13) return 'F';
+  return range[r][c] || 'F';
+}
+
+function randomHand() {
+  // Pick random from the 13x13 matrix
+  const r = Math.floor(Math.random() * 13);
+  const c = Math.floor(Math.random() * 13);
+  const suited = c > r;
+  const pair = r === c;
+
+  // Generate actual cards
+  let suit1, suit2;
+  if (pair) {
+    const suits = [...SUITS].sort(() => Math.random() - 0.5);
+    suit1 = suits[0]; suit2 = suits[1];
+  } else if (suited) {
+    suit1 = SUITS[Math.floor(Math.random() * 4)];
+    suit2 = suit1;
+  } else {
+    suit1 = SUITS[Math.floor(Math.random() * 4)];
+    do { suit2 = SUITS[Math.floor(Math.random() * 4)]; } while (suit2 === suit1);
+  }
+
+  const rank1 = suited ? RANKS[r] : RANKS[c < r ? c : r];
+  const rank2 = suited ? RANKS[c] : RANKS[c < r ? r : c];
+
+  return {
+    r, c,
+    name: getHandName(r, c),
+    card1: { rank: RANKS[r], suit: suit1 },
+    card2: { rank: RANKS[c], suit: suit2 },
+    suited, pair
+  };
+}
+
+// Valid scenario-position combinations
+const VALID_COMBOS = [
+  // RFI: UTG~SB can open (BB defends, not opens)
+  {sc:'rfi', pos:'UTG'}, {sc:'rfi', pos:'MP'}, {sc:'rfi', pos:'CO'},
+  {sc:'rfi', pos:'BTN'}, {sc:'rfi', pos:'SB'},
+  // vs Raise: positions after opener
+  {sc:'vs_raise', pos:'MP'}, {sc:'vs_raise', pos:'CO'}, {sc:'vs_raise', pos:'BTN'},
+  {sc:'vs_raise', pos:'SB'}, {sc:'vs_raise', pos:'BB'},
+  // vs 3Bet: opener faces 3bet
+  {sc:'vs_3bet', pos:'UTG'}, {sc:'vs_3bet', pos:'MP'}, {sc:'vs_3bet', pos:'CO'},
+  {sc:'vs_3bet', pos:'BTN'}, {sc:'vs_3bet', pos:'SB'}, {sc:'vs_3bet', pos:'BB'},
+  // vs 4Bet: 3bettor faces 4bet
+  {sc:'vs_4bet', pos:'UTG'}, {sc:'vs_4bet', pos:'MP'}, {sc:'vs_4bet', pos:'CO'},
+  {sc:'vs_4bet', pos:'BTN'}, {sc:'vs_4bet', pos:'SB'}, {sc:'vs_4bet', pos:'BB'},
+];
+
+function nextQuestion() {
+  answered = false;
+  document.getElementById('feedback').className = 'feedback';
+  document.getElementById('nextBtn').classList.remove('show');
+
+  // Randomize scenario and/or position
+  if (randomScenario && randomPos) {
+    const combo = VALID_COMBOS[Math.floor(Math.random() * VALID_COMBOS.length)];
+    currentScenario = combo.sc;
+    currentPos = combo.pos;
+  } else if (randomScenario) {
+    const validForPos = VALID_COMBOS.filter(c => c.pos === currentPos);
+    if (validForPos.length > 0) {
+      currentScenario = validForPos[Math.floor(Math.random() * validForPos.length)].sc;
+    }
+  } else if (randomPos) {
+    const validForSc = VALID_COMBOS.filter(c => c.sc === currentScenario);
+    if (validForSc.length > 0) {
+      currentPos = validForSc[Math.floor(Math.random() * validForSc.length)].pos;
+    }
+  }
+
+  // Generate hand
+  currentHand = randomHand();
+  correctAction = getAction(currentPos, currentScenario, currentHand.r, currentHand.c);
+
+  // Render cards
+  renderCards(currentHand);
+
+  // Render table
+  renderTable();
+
+  // Render situation text
+  renderSituation();
+
+  // Render action buttons (always all 4)
+  renderActionButtons();
+}
+
+function renderCards(hand) {
+  const c1 = hand.card1, c2 = hand.card2;
+  document.getElementById('heroCards').innerHTML = `
+    <div class="card ${SUIT_CLASSES[c1.suit]}">
+      <div class="corner">${c1.rank}<br>${c1.suit}</div>
+      <div class="rank">${c1.rank}</div>
+      <div class="suit">${c1.suit}</div>
+      <div class="corner-br">${c1.rank}<br>${c1.suit}</div>
+    </div>
+    <div class="card ${SUIT_CLASSES[c2.suit]}">
+      <div class="corner">${c2.rank}<br>${c2.suit}</div>
+      <div class="rank">${c2.rank}</div>
+      <div class="suit">${c2.suit}</div>
+      <div class="corner-br">${c2.rank}<br>${c2.suit}</div>
+    </div>
+  `;
+}
+
+function renderTable() {
+  const positions = ['UTG','MP','CO','BTN','SB','BB'];
+  const villains = getVillainPositions();
+
+  positions.forEach(p => {
+    const seat = document.getElementById('seat' + p);
+    seat.className = 'seat';
+    if (p === currentPos) seat.classList.add('hero');
+    else if (villains.includes(p)) seat.classList.add('villain');
+    else if (shouldFold(p)) seat.classList.add('folded');
+    else seat.classList.add('inactive');
+  });
+
+  // Pot
+  let pot = '1.5BB';
+  if (currentScenario === 'vs_raise') pot = '5.5BB';
+  if (currentScenario === 'vs_3bet') pot = '15.5BB';
+  if (currentScenario === 'vs_4bet') pot = '30BB';
+  document.getElementById('potDisplay').textContent = 'Pot: ' + pot;
+}
+
+// Returns array of villain positions involved in the action
+function getVillainPositions() {
+  if (currentScenario === 'rfi') return [];
+  const positions = ['UTG','MP','CO','BTN','SB','BB'];
+  const heroIdx = positions.indexOf(currentPos);
+
+  if (currentScenario === 'vs_raise') {
+    // Opener is an earlier position
+    for (let i = 0; i < heroIdx; i++) return [positions[i]];
+    return [positions[0]];
+  }
+  if (currentScenario === 'vs_3bet') {
+    // Hero opened, someone after 3bet
+    for (let i = heroIdx + 1; i < 6; i++) return [positions[i]];
+    return [positions[5]];
+  }
+  if (currentScenario === 'vs_4bet') {
+    // Hero 3bet, original opener 4bets
+    // Original opener is before hero, 4bettor
+    for (let i = 0; i < heroIdx; i++) return [positions[i]];
+    for (let i = heroIdx + 1; i < 6; i++) return [positions[i]];
+    return [positions[0]];
+  }
+  return [];
+}
+
+// Legacy helper
+function getVillainPos() {
+  const v = getVillainPositions();
+  return v.length > 0 ? v[0] : null;
+}
+
+function shouldFold(p) {
+  const positions = ['UTG','MP','CO','BTN','SB','BB'];
+  const heroIdx = positions.indexOf(currentPos);
+  const pIdx = positions.indexOf(p);
+  const villains = getVillainPositions();
+
+  if (p === currentPos || villains.includes(p)) return false;
+  if (currentScenario === 'rfi') return pIdx < heroIdx;
+  if (currentScenario === 'vs_raise') return pIdx < heroIdx && !villains.includes(p);
+  // vs_3bet / vs_4bet: everyone else folded
+  return true;
+}
+
+function renderSituation() {
+  const posNames = {UTG:'UTG(アンダーザガン)',MP:'MP(ミドルポジション)',CO:'CO(カットオフ)',BTN:'BTN(ボタン)',SB:'SB(スモールブラインド)',BB:'BB(ビッグブラインド)'};
+  const villain = getVillainPos();
+
+  let text = '', detail = '';
+  if (currentScenario === 'rfi') {
+    if (currentPos === 'UTG') {
+      text = `あなたは ${currentPos} です。プリフロップ最初のアクションです。`;
+    } else if (currentPos === 'SB') {
+      text = `あなたは ${currentPos} です。全員フォールドで回ってきました。`;
+    } else if (currentPos === 'BB') {
+      text = 'あなたは BB です。（BBはRFIシナリオ対象外）';
+    } else {
+      const foldedPlayers = [];
+      const positions = ['UTG','MP','CO','BTN','SB','BB'];
+      const heroIdx = positions.indexOf(currentPos);
+      for (let i = 0; i < heroIdx; i++) foldedPlayers.push(positions[i]);
+      text = `あなたは ${currentPos} です。${foldedPlayers.join('・')} がフォールドしました。`;
+    }
+    detail = `ハンド: ${currentHand.name} | まだ誰もオープンしていません。あなたのアクションは？`;
+  } else if (currentScenario === 'vs_raise') {
+    text = `${villain} が2.5BBにオープンレイズ。あなたは ${currentPos} です。`;
+    detail = `ハンド: ${currentHand.name} | フォールド・コール・レイズ（3bet）・オールイン？`;
+  } else if (currentScenario === 'vs_3bet') {
+    text = `あなたが ${currentPos} で2.5BBオープン → ${villain} が8BBに3ベット。`;
+    detail = `ハンド: ${currentHand.name} | フォールド・コール・レイズ（4bet）・オールイン？`;
+  } else if (currentScenario === 'vs_4bet') {
+    text = `${villain} オープン → あなたが ${currentPos} で3ベット → ${villain} が22BBに4ベット。`;
+    detail = `ハンド: ${currentHand.name} | フォールド・コール・5bet(オールイン)？`;
+  }
+
+  document.getElementById('scenarioText').textContent = text;
+  document.getElementById('scenarioDetail').textContent = detail;
+}
+
+function renderActionButtons() {
+  const btns = document.getElementById('actionButtons');
+
+  // Context-appropriate labels, but always show all 4
+  let raiseLabel = 'レイズ';
+  if (currentScenario === 'rfi') raiseLabel = 'レイズ (2.5BB)';
+  if (currentScenario === 'vs_raise') raiseLabel = '3ベット';
+  if (currentScenario === 'vs_3bet') raiseLabel = '4ベット';
+  if (currentScenario === 'vs_4bet') raiseLabel = '5ベット';
+
+  let callLabel = 'コール';
+  if (currentScenario === 'rfi') callLabel = 'コール (リンプ)';
+
+  const actions = [
+    { key: 'F', label: 'フォールド', cls: 'fold' },
+    { key: 'C', label: callLabel, cls: 'call' },
+    { key: 'R', label: raiseLabel, cls: 'raise' },
+    { key: 'A', label: 'オールイン', cls: 'allin' },
+  ];
+
+  btns.innerHTML = actions.map(a =>
+    `<button class="action-btn ${a.cls}" onclick="submitAnswer('${a.key}')" id="btn_${a.key}">${a.label}</button>`
+  ).join('');
+}
+
+// Map button key to internal range key(s) and vice versa
+// Buttons: F=Fold, C=Call, R=Raise(context-dependent), A=AllIn
+// Range data: F=Fold, C=Call, R=OpenRaise, 3=3bet, A=AllIn, M=Mixed
+function buttonToRangeKeys(btnKey) {
+  if (btnKey === 'R') return ['R','3','M']; // Raise button matches any raise action
+  return [btnKey];
+}
+function rangeKeyToButtonKey(rKey) {
+  if (rKey === '3' || rKey === 'M') return 'R';
+  return rKey;
+}
+
+// Get freq mapped to button keys (F, C, R, A)
+function getButtonFreq(scenario, pos, r, c) {
+  const raw = getFreq(scenario, pos, r, c);
+  const mapped = {F:0, C:0, R:0, A:0};
+  for (const [k, v] of Object.entries(raw)) {
+    const bk = rangeKeyToButtonKey(k);
+    mapped[bk] = (mapped[bk] || 0) + v;
+  }
+  return mapped;
+}
+
+function submitAnswer(action) {
+  if (answered) return;
+  answered = true;
+
+  // Check correctness using frequency data mapped to button keys
+  const btnFreq = getButtonFreq(currentScenario, currentPos, currentHand.r, currentHand.c);
+  const actionPct = btnFreq[action] || 0;
+  // Correct if this action has >=20% frequency (part of mixed strategy)
+  let isCorrect = actionPct >= 20;
+
+  const fb = document.getElementById('feedback');
+  const title = document.getElementById('feedbackTitle');
+  const text = document.getElementById('feedbackText');
+
+  // Find dominant action (in button terms)
+  const dominant = Object.entries(btnFreq).sort((a,b) => b[1] - a[1])[0];
+
+  if (isCorrect) {
+    fb.className = 'feedback correct';
+    title.textContent = '✓ 正解！';
+    stats.correct++;
+    stats.streak++;
+    if (stats.streak > stats.bestStreak) stats.bestStreak = stats.streak;
+    stats.history.push(1);
+  } else {
+    fb.className = 'feedback wrong';
+    title.textContent = '✗ 不正解';
+    stats.wrong++;
+    stats.streak = 0;
+    stats.history.push(0);
+  }
+
+  // Build context-aware labels for display
+  const BTN_LABELS = {F:'フォールド', C:'コール', R:'レイズ', A:'オールイン'};
+  if (currentScenario === 'vs_raise') BTN_LABELS.R = '3ベット';
+  if (currentScenario === 'vs_3bet') BTN_LABELS.R = '4ベット';
+  if (currentScenario === 'vs_4bet') BTN_LABELS.R = '5ベット';
+  if (currentScenario === 'rfi') BTN_LABELS.C = 'リンプ';
+
+  const isMixed = Object.values(btnFreq).filter(v => v > 0).length > 1;
+  const freqStr = Object.entries(btnFreq).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1])
+    .map(([k,v])=>`${BTN_LABELS[k]} ${v}%`).join(' / ');
+  const dominantLabel = BTN_LABELS[dominant[0]];
+  text.innerHTML = `
+    ${currentHand.name} @ ${currentPos}: <span class="correct-answer">${isMixed ? freqStr : dominantLabel + ' 100%'}</span><br>
+    <span style="font-size:12px;color:#666">${getExplanation()}</span>
+  `;
+
+  // Highlight buttons: green for correct actions, dim others
+  document.querySelectorAll('.action-btn').forEach(b => {
+    b.style.opacity = '0.4';
+    b.style.pointerEvents = 'none';
+  });
+  // Highlight all actions with >=20% frequency
+  for (const [k, v] of Object.entries(btnFreq)) {
+    if (v >= 20) {
+      const btn = document.getElementById('btn_' + k);
+      if (btn) {
+        btn.style.opacity = '1';
+        btn.style.border = '3px solid #58a6ff';
+      }
+    }
+  }
+
+  // Render answer range chart
+  renderAnswerRange();
+
+  if (stats.history.length > 100) stats.history = stats.history.slice(-100);
+  localStorage.setItem('gtoStats', JSON.stringify(stats));
+  updateStats();
+
+  document.getElementById('nextBtn').classList.add('show');
+}
+
+function freqToGradient(freq) {
+  const COLORS = {R:'#d29922',C:'#238636','3':'#da3633',A:'#db61a2',F:'#21262d'};
+  const entries = Object.entries(freq).filter(([,v]) => v > 0).sort((a,b) => b[1] - a[1]);
+  if (entries.length <= 1) return null; // pure action
+  let stops = [], pos = 0;
+  for (const [act, pct] of entries) {
+    const col = COLORS[act] || '#21262d';
+    stops.push(`${col} ${pos}%`);
+    pos += pct;
+    stops.push(`${col} ${pos}%`);
+  }
+  return `linear-gradient(135deg, ${stops.join(', ')})`;
+}
+
+function freqToTooltip(handName, freq) {
+  const COLORS = {R:'#d29922',C:'#238636','3':'#da3633',A:'#db61a2',F:'#484f58'};
+  const LABELS = {R:'Raise',C:'Call','3':'3Bet',A:'AllIn',F:'Fold'};
+  const entries = Object.entries(freq).filter(([,v]) => v > 0).sort((a,b) => b[1] - a[1]);
+  let lines = entries.map(([act,pct]) =>
+    `<span style="color:${COLORS[act]}">${LABELS[act]}: ${pct}%</span>`
+  ).join('<br>');
+  let barHtml = entries.map(([act,pct]) =>
+    `<div class="tooltip-bar-seg" style="width:${pct}%;background:${COLORS[act]}"></div>`
+  ).join('');
+  return `<div class="cell-tooltip"><strong>${handName}</strong><br>${lines}<div class="tooltip-bar">${barHtml}</div></div>`;
+}
+
+function renderAnswerRange() {
+  const range = RANGES[currentScenario]?.[currentPos];
+  const grid = document.getElementById('answerRangeGrid');
+  const title = document.getElementById('answerRangeTitle');
+  const scenarioNames = { rfi: 'RFI', vs_raise: 'vs Raise', vs_3bet: 'vs 3Bet' };
+  const breakdown = document.getElementById('handBreakdown');
+
+  if (!range) {
+    grid.innerHTML = '';
+    title.textContent = '';
+    breakdown.innerHTML = '';
+    return;
+  }
+
+  // ---- Hand breakdown display (button-mapped) ----
+  const hf = getButtonFreq(currentScenario, currentPos, currentHand.r, currentHand.c);
+  const COLORS = {R:'#d29922',C:'#238636',A:'#db61a2',F:'#484f58'};
+  const LABELS = {R:'レイズ',C:'コール',A:'オールイン',F:'フォールド'};
+  if (currentScenario === 'vs_raise') LABELS.R = '3ベット';
+  if (currentScenario === 'vs_3bet') LABELS.R = '4ベット';
+  if (currentScenario === 'vs_4bet') LABELS.R = '5ベット';
+  if (currentScenario === 'rfi') LABELS.C = 'リンプ';
+  const entries = Object.entries(hf).filter(([,v]) => v > 0).sort((a,b) => b[1] - a[1]);
+  let bdHtml = `<h5>${currentHand.name} のアクション構成</h5>`;
+  for (const [act, pct] of entries) {
+    bdHtml += `<div class="breakdown-row">
+      <div class="breakdown-color" style="background:${COLORS[act] || '#888'}"></div>
+      <span class="breakdown-label">${LABELS[act] || act}</span>
+      <span class="breakdown-pct" style="color:${COLORS[act] || '#888'}">${pct}%</span>
+      <div class="breakdown-bar-wrap"><div class="breakdown-bar-fill" style="width:${pct}%;background:${COLORS[act] || '#888'}"></div></div>
+    </div>`;
+  }
+  breakdown.innerHTML = bdHtml;
+
+  // ---- Range grid with freq tooltips ----
+  title.textContent = `${currentPos} ${scenarioNames[currentScenario]} レンジ（出題ハンド: ${currentHand.name}）`;
+
+  let html = '';
+  for (let r = 0; r < 13; r++) {
+    for (let c = 0; c < 13; c++) {
+      const handName = getHandName(r, c);
+      const act = range[r]?.[c] || 'F';
+      const freq = getFreq(currentScenario, currentPos, r, c);
+      const grad = freqToGradient(freq);
+      const isCurrent = (r === currentHand.r && c === currentHand.c) ? ' current-hand' : '';
+
+      let cls = {R:'r-raise',C:'r-call','3':'r-3bet',F:'r-fold',M:'r-mixed',A:'r-allin'}[act] || 'r-fold';
+      let style = '';
+      if (grad) {
+        cls = '';
+        style = `style="background:${grad};color:#fff"`;
+      }
+
+      const tooltip = freqToTooltip(handName, freq);
+      html += `<div class="range-cell ${cls}${isCurrent}" ${style}>${handName}${tooltip}</div>`;
+    }
+  }
+  grid.innerHTML = html;
+
+  // ---- Freq summary bar ----
+  const freqBar = document.getElementById('answerFreqBar');
+  let totalR=0,totalC=0,total3=0,totalA=0,totalF=0,totalAll=0;
+  for (let r = 0; r < 13; r++) {
+    for (let c = 0; c < 13; c++) {
+      const combos = (r===c)?6:(c>r)?4:12;
+      const f = getFreq(currentScenario, currentPos, r, c);
+      totalR += (f.R||0)*combos/100;
+      totalC += (f.C||0)*combos/100;
+      total3 += (f['3']||0)*combos/100;
+      totalA += (f.A||0)*combos/100;
+      totalF += (f.F||0)*combos/100;
+      totalAll += combos;
+    }
+  }
+  const pR=(totalR/totalAll*100).toFixed(1),pC=(totalC/totalAll*100).toFixed(1),p3=(total3/totalAll*100).toFixed(1),pA=(totalA/totalAll*100).toFixed(1),pF=(totalF/totalAll*100).toFixed(1);
+  freqBar.innerHTML = `
+    ${totalR>0?`<div class="freq-bar-seg" style="width:${pR}%;background:#d29922" title="Raise ${pR}%"></div>`:''}
+    ${totalC>0?`<div class="freq-bar-seg" style="width:${pC}%;background:#238636" title="Call ${pC}%"></div>`:''}
+    ${total3>0?`<div class="freq-bar-seg" style="width:${p3}%;background:#da3633" title="3Bet ${p3}%"></div>`:''}
+    ${totalA>0?`<div class="freq-bar-seg" style="width:${pA}%;background:#db61a2" title="AllIn ${pA}%"></div>`:''}
+    ${totalF>0?`<div class="freq-bar-seg" style="width:${pF}%;background:#21262d" title="Fold ${pF}%"></div>`:''}
+  `;
+}
+
+function getExplanation() {
+  const h = currentHand.name;
+  const pos = currentPos;
+  const btnFreq = getButtonFreq(currentScenario, currentPos, currentHand.r, currentHand.c);
+  const isMixed = Object.values(btnFreq).filter(v => v > 0).length > 1;
+
+  const CTX_LABELS = {F:'フォールド', C:'コール', R:'レイズ', A:'オールイン'};
+  if (currentScenario === 'vs_raise') CTX_LABELS.R = '3ベット';
+  if (currentScenario === 'vs_3bet') CTX_LABELS.R = '4ベット';
+  if (currentScenario === 'vs_4bet') CTX_LABELS.R = '5ベット';
+  if (currentScenario === 'rfi') CTX_LABELS.C = 'リンプ';
+
+  if (isMixed) {
+    const parts = Object.entries(btnFreq).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1])
+      .map(([k,v])=>`${CTX_LABELS[k]}${v}%`).join('、');
+    return `${h} は ${pos} でレンジの境界にあり、ミックス戦略（${parts}）が最適です。`;
+  }
+
+  const dominant = Object.entries(btnFreq).sort((a,b)=>b[1]-a[1])[0][0];
+  if (dominant === 'R') return `${h} は ${pos} から${CTX_LABELS.R}レンジに含まれます（100%）。`;
+  if (dominant === 'F') return `${h} は ${pos} では十分な強さがなく、フォールドが最適です（100%）。`;
+  if (dominant === 'C') return `${h} は${CTX_LABELS.C}に適した強さです（100%）。`;
+  if (dominant === 'A') return `${h} はスタックオフに十分な強さがあります（100%オールイン）。`;
+  return '';
+}
+
+function updateStats() {
+  const total = stats.correct + stats.wrong;
+  const acc = total > 0 ? Math.round(stats.correct / total * 100) : 0;
+
+  document.getElementById('sCorrect').textContent = stats.correct;
+  document.getElementById('sWrong').textContent = stats.wrong;
+  document.getElementById('sAccuracy').textContent = acc + '%';
+  document.getElementById('sBestStreak').textContent = stats.bestStreak;
+  document.getElementById('hAccuracy').textContent = acc + '%';
+  document.getElementById('hStreak').textContent = stats.streak;
+  document.getElementById('hTotal').textContent = total;
+
+  // History bar
+  const bar = document.getElementById('historyBar');
+  bar.innerHTML = stats.history.slice(-50).map(h =>
+    `<div class="history-dot ${h ? 'h-correct' : 'h-wrong'}"></div>`
+  ).join('');
+}
+
+function resetStats() {
+  if (!confirm('統計データをリセットしますか？')) return;
+  stats = { correct: 0, wrong: 0, streak: 0, bestStreak: 0, history: [] };
+  localStorage.setItem('gtoStats', JSON.stringify(stats));
+  updateStats();
+}
+
+// ===== RANGE CHART =====
+function renderRangeChart() {
+  const range = RANGES[currentScenario]?.[currentPos];
+  const grid = document.getElementById('rangeGrid');
+  const scenarioNames = { rfi: 'オープンレイズ (RFI)', vs_raise: 'vs オープンレイズ', vs_3bet: 'vs 3ベット', vs_4bet: 'vs 4ベット' };
+
+  document.getElementById('rangeTitle').textContent = `${currentPos} ${scenarioNames[currentScenario]} レンジ`;
+
+  if (!range) {
+    grid.innerHTML = '<p style="color:#8b949e;grid-column:1/-1;text-align:center;padding:40px">このポジション/シナリオの組み合わせはデータがありません</p>';
+    return;
+  }
+
+  let html = '';
+  let totalHands = 0;
+  const weightedCounts = { R:0, C:0, '3':0, F:0, A:0 };
+
+  for (let r = 0; r < 13; r++) {
+    for (let c = 0; c < 13; c++) {
+      const handName = getHandName(r, c);
+      const action = range[r]?.[c] || 'F';
+      const freq = getFreq(currentScenario, currentPos, r, c);
+      const grad = freqToGradient(freq);
+      const tooltip = freqToTooltip(handName, freq);
+
+      let combos = (r===c)?6:(c>r)?4:12;
+      totalHands += combos;
+
+      // Weighted combo counts
+      for (const [act, pct] of Object.entries(freq)) {
+        weightedCounts[act] = (weightedCounts[act]||0) + combos * pct / 100;
+      }
+
+      let cls = {R:'r-raise',C:'r-call','3':'r-3bet',F:'r-fold',M:'r-mixed',A:'r-allin'}[action] || 'r-fold';
+      let style = '';
+      if (grad) {
+        cls = '';
+        style = `style="background:${grad};color:#fff"`;
+      }
+
+      html += `<div class="range-cell ${cls}" ${style}>${handName}${tooltip}</div>`;
+    }
+  }
+
+  grid.innerHTML = html;
+
+  const playable = totalHands - (weightedCounts.F || 0);
+  const pct = (playable / totalHands * 100).toFixed(1);
+  document.getElementById('rangeDesc').textContent =
+    `プレイ頻度: 約${pct}% (${Math.round(playable)}/${totalHands}コンボ)`;
+
+  const wR=weightedCounts.R||0, wC=weightedCounts.C||0, w3=weightedCounts['3']||0, wA=weightedCounts.A||0, wF=weightedCounts.F||0;
+  document.getElementById('rangeStats').innerHTML = `
+    <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:center">
+      <span style="color:#d29922">■ レイズ: ${wR.toFixed(1)} (${(wR/totalHands*100).toFixed(1)}%)</span>
+      <span style="color:#238636">■ コール: ${wC.toFixed(1)} (${(wC/totalHands*100).toFixed(1)}%)</span>
+      <span style="color:#da3633">■ 3ベット: ${w3.toFixed(1)} (${(w3/totalHands*100).toFixed(1)}%)</span>
+      <span style="color:#db61a2">■ オールイン: ${wA.toFixed(1)} (${(wA/totalHands*100).toFixed(1)}%)</span>
+      <span style="color:#484f58">■ フォールド: ${wF.toFixed(1)} (${(wF/totalHands*100).toFixed(1)}%)</span>
+    </div>
+    <div style="display:flex;height:10px;border-radius:5px;overflow:hidden;margin-top:10px;width:100%;max-width:600px">
+      ${wR>0?`<div style="width:${wR/totalHands*100}%;background:#d29922;height:100%"></div>`:''}
+      ${wC>0?`<div style="width:${wC/totalHands*100}%;background:#238636;height:100%"></div>`:''}
+      ${w3>0?`<div style="width:${w3/totalHands*100}%;background:#da3633;height:100%"></div>`:''}
+      ${wA>0?`<div style="width:${wA/totalHands*100}%;background:#db61a2;height:100%"></div>`:''}
+      ${wF>0?`<div style="width:${wF/totalHands*100}%;background:#21262d;height:100%"></div>`:''}
+    </div>
+  `;
+}
+
+function setRangeView(el, view) {
+  document.querySelectorAll('.view-toggle-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('rangeGrid').classList.toggle('hidden', view !== 'grid');
+  document.getElementById('rangeList').classList.toggle('hidden', view !== 'list');
+
+  if (view === 'list') renderRangeList();
+}
+
+function renderRangeList() {
+  const range = RANGES[currentScenario]?.[currentPos];
+  if (!range) return;
+
+  const groups = { R: [], C: [], '3': [], A: [], M: [], F: [] };
+
+  for (let r = 0; r < 13; r++) {
+    for (let c = 0; c < 13; c++) {
+      const action = range[r]?.[c] || 'F';
+      const name = getHandName(r, c);
+      if (!groups[action]) groups[action] = [];
+      groups[action].push(name);
+    }
+  }
+
+  const labels = { R: 'レイズ', C: 'コール', '3': '3ベット', A: 'オールイン', M: 'ミックス', F: 'フォールド' };
+  const colors = { R: '#d29922', C: '#238636', '3': '#da3633', A: '#db61a2', M: '#f0883e', F: '#484f58' };
+
+  let html = '';
+  for (const [key, hands] of Object.entries(groups)) {
+    if (hands.length === 0) continue;
+    html += `<div style="margin-bottom:15px">
+      <h4 style="color:${colors[key]};font-size:14px;margin-bottom:6px">${labels[key]} (${hands.length}ハンド)</h4>
+      <p style="font-family:'JetBrains Mono',monospace;font-size:13px;color:#c9d1d9;line-height:1.8">${hands.join(', ')}</p>
+    </div>`;
+  }
+
+  document.getElementById('rangeList').innerHTML = html;
+}
+
+// ===== KEYBOARD SHORTCUTS =====
+// 1/F=Fold, 2/C=Call, 3/R=Raise, 4/A=AllIn, Enter/Space=Next
+document.addEventListener('keydown', e => {
+  if (answered && (e.key === 'Enter' || e.key === ' ')) {
+    e.preventDefault();
+    nextQuestion();
+    return;
+  }
+  if (answered) return;
+
+  const k = e.key.toLowerCase();
+  if (k === '1' || k === 'f') submitAnswer('F');
+  if (k === '2' || k === 'c') submitAnswer('C');
+  if (k === '3' || k === 'r') submitAnswer('R');
+  if (k === '4' || k === 'a') submitAnswer('A');
+});
+</script>
+</body>
+</html>

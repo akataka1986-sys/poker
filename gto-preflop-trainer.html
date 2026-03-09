@@ -204,8 +204,8 @@
 
     <h3>ポジション</h3>
     <div class="pos-grid">
-      <div class="pos-btn" data-pos="random" onclick="setPosition(this)" style="grid-column:1/-1;background:#1f6feb;color:#fff;border-color:#1f6feb" id="posRandom">🎲 ランダム</div>
-      <div class="pos-btn active" data-pos="UTG" onclick="setPosition(this)">UTG</div>
+      <div class="pos-btn active" data-pos="random" onclick="setPosition(this)" style="grid-column:1/-1;background:#1f6feb;color:#fff;border-color:#1f6feb" id="posRandom">🎲 ランダム</div>
+      <div class="pos-btn" data-pos="UTG" onclick="setPosition(this)">UTG</div>
       <div class="pos-btn" data-pos="MP" onclick="setPosition(this)">MP</div>
       <div class="pos-btn" data-pos="CO" onclick="setPosition(this)">CO</div>
       <div class="pos-btn" data-pos="BTN" onclick="setPosition(this)">BTN</div>
@@ -917,7 +917,7 @@ setFreq('vs_4bet','UTG',2,2,{C:60,A:30,F:10});
 // ===== STATE =====
 let mode = 'quiz';
 let currentPos = 'UTG';
-let randomPos = false;
+let randomPos = true;
 let randomScenario = false;
 let currentScenario = 'rfi';
 let currentHand = null;
@@ -930,9 +930,8 @@ const SUIT_CLASSES = {'♠':'spades','♥':'hearts','♦':'diamonds','♣':'club
 const ACTION_LABELS = {R:'レイズ',C:'コール',F:'フォールド','3':'3ベット',A:'オールイン',M:'レイズ'};
 const ACTION_CLASSES = {R:'raise',C:'call',F:'fold','3':'raise',A:'allin',M:'raise'};
 
-// ===== INIT =====
+// ===== INIT (updateStats here, nextQuestion called after VALID_COMBOS) =====
 updateStats();
-nextQuestion();
 
 // ===== FUNCTIONS =====
 function setMode(m) {
@@ -1031,6 +1030,9 @@ const VALID_COMBOS = [
   {sc:'vs_4bet', pos:'BTN'}, {sc:'vs_4bet', pos:'SB'}, {sc:'vs_4bet', pos:'BB'},
 ];
 
+// Start first question (must be after VALID_COMBOS is defined)
+nextQuestion();
+
 function nextQuestion() {
   answered = false;
   document.getElementById('feedback').className = 'feedback';
@@ -1116,20 +1118,23 @@ function getVillainPositions() {
   const heroIdx = positions.indexOf(currentPos);
 
   if (currentScenario === 'vs_raise') {
-    // Opener is an earlier position
-    for (let i = 0; i < heroIdx; i++) return [positions[i]];
+    // Opener is a random earlier position
+    const earlier = positions.filter((_, i) => i < heroIdx);
+    if (earlier.length > 0) return [earlier[Math.floor(Math.random() * earlier.length)]];
     return [positions[0]];
   }
   if (currentScenario === 'vs_3bet') {
     // Hero opened, someone after 3bet
-    for (let i = heroIdx + 1; i < 6; i++) return [positions[i]];
+    const later = positions.filter((_, i) => i > heroIdx);
+    if (later.length > 0) return [later[Math.floor(Math.random() * later.length)]];
     return [positions[5]];
   }
   if (currentScenario === 'vs_4bet') {
-    // Hero 3bet, original opener 4bets
-    // Original opener is before hero, 4bettor
-    for (let i = 0; i < heroIdx; i++) return [positions[i]];
-    for (let i = heroIdx + 1; i < 6; i++) return [positions[i]];
+    // Hero 3bet, original opener 4bets back
+    const earlier = positions.filter((_, i) => i < heroIdx);
+    if (earlier.length > 0) return [earlier[Math.floor(Math.random() * earlier.length)]];
+    const later = positions.filter((_, i) => i > heroIdx);
+    if (later.length > 0) return [later[Math.floor(Math.random() * later.length)]];
     return [positions[0]];
   }
   return [];
@@ -1309,6 +1314,9 @@ function submitAnswer(action) {
   updateStats();
 
   document.getElementById('nextBtn').classList.add('show');
+
+  // Auto-scroll to feedback and range chart
+  fb.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function freqToGradient(freq) {

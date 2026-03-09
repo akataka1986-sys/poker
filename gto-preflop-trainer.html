@@ -179,6 +179,102 @@
   .view-toggle-btn.active{background:#1f6feb;border-color:#1f6feb;color:#fff}
 
   .hidden{display:none!important}
+
+  /* === MOBILE RESPONSIVE === */
+  @media (max-width: 768px) {
+    .header{flex-direction:column;gap:8px;padding:10px 15px;text-align:center}
+    .header h1{font-size:18px}
+    .header-stats{gap:12px;font-size:11px;justify-content:center}
+
+    .app{flex-direction:column;height:auto;min-height:calc(100vh - 80px)}
+
+    .sidebar{width:100%;border-right:none;border-bottom:1px solid #30363d;padding:12px 15px;order:-1;overflow-y:visible}
+    .sidebar h3{margin-top:12px;margin-bottom:8px;font-size:12px}
+    .sidebar h3:first-child{margin-top:0}
+    .mode-tabs{flex-direction:row;gap:6px}
+    .mode-tab{padding:8px 12px;font-size:13px;text-align:center;flex:1}
+    .pos-grid{grid-template-columns:repeat(4,1fr);gap:4px}
+    .pos-btn{padding:6px 4px;font-size:11px}
+    .scenario-list{flex-direction:row;flex-wrap:wrap;gap:4px}
+    .scenario-btn{padding:6px 8px;font-size:11px;flex:1;min-width:calc(50% - 4px);text-align:center}
+    .legend,.settings-group,.sidebar > div:last-child{display:none}
+
+    .main-content{padding:12px 10px}
+
+    .table-scene{width:100%;height:220px;margin-bottom:15px}
+    .poker-table{width:85%;max-width:340px;height:170px;border-width:8px;border-radius:85px}
+    .table-label{font-size:14px}
+    .seat{width:38px;height:38px;font-size:9px;border-width:2px}
+    .seat-label{font-size:8px;bottom:-16px}
+    .pot-display{font-size:10px;padding:3px 10px}
+    #seatUTG{bottom:5px;left:20px}
+    #seatMP{top:5px;left:30px}
+    #seatCO{top:5px;left:50%}
+    #seatBTN{top:5px;right:30px}
+    #seatSB{bottom:5px;right:20px}
+    #seatBB{bottom:5px;right:50%}
+
+    .hand-display{margin-bottom:15px}
+    .hand-label{font-size:12px;margin-bottom:6px}
+    .cards{gap:8px}
+    .card{width:60px;height:88px;border-radius:8px}
+    .card .rank{font-size:24px}
+    .card .suit{font-size:22px}
+    .card .corner{font-size:9px;top:4px;left:5px}
+    .card .corner-br{font-size:9px;bottom:4px;right:5px}
+
+    .situation-box{padding:12px 14px;margin-bottom:15px}
+    .situation-box .scenario-text{font-size:14px}
+    .situation-box .detail-text{font-size:12px}
+
+    .action-buttons{gap:8px;margin-bottom:15px}
+    .action-btn{padding:12px 16px;font-size:14px;min-width:0;flex:1}
+
+    .feedback{padding:14px;margin-bottom:15px}
+    .feedback h3{font-size:17px}
+    .feedback p{font-size:12px}
+    .hand-breakdown{padding:10px 12px}
+    .breakdown-row{font-size:11px;gap:5px}
+    .breakdown-bar-wrap{min-width:60px}
+
+    .answer-range-grid{max-width:100%}
+    .answer-range-grid .range-cell{font-size:6px}
+
+    .next-btn{padding:10px 30px;font-size:14px}
+
+    .stats-panel{grid-template-columns:repeat(2,1fr);gap:8px;margin-top:20px}
+    .stat-card{padding:12px}
+    .stat-card .stat-val{font-size:22px}
+    .stat-card .stat-label{font-size:11px}
+
+    .history-bar{gap:2px;margin-top:10px}
+    .history-dot{width:10px;height:10px}
+
+    .range-grid{font-size:8px;gap:1px;max-width:100%}
+    .range-cell{font-size:7px}
+    .range-cell .cell-tooltip{display:none!important}
+
+    .range-section{margin-top:20px}
+    .range-section h2{font-size:15px;margin-bottom:10px}
+    .view-mode-toggle{flex-wrap:wrap}
+    .view-toggle-btn{font-size:11px;padding:5px 10px}
+
+    .quiz-container{max-width:100%}
+  }
+
+  @media (max-width: 400px) {
+    .header h1{font-size:16px}
+    .pos-grid{grid-template-columns:repeat(3,1fr)}
+    .scenario-btn{min-width:100%}
+    .table-scene{height:190px}
+    .poker-table{height:150px;border-radius:75px}
+    .seat{width:34px;height:34px;font-size:8px}
+    .card{width:52px;height:76px}
+    .card .rank{font-size:20px}
+    .card .suit{font-size:18px}
+    .action-btn{padding:10px 10px;font-size:12px}
+    .stat-card .stat-val{font-size:18px}
+  }
 </style>
 </head>
 <body>

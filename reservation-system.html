@@ -1,0 +1,1426 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>交通予約システム - Travel Booking</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700;900&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Noto Sans JP', sans-serif;
+    background: #f0f4f8;
+    color: #1a1a2e;
+    min-height: 100vh;
+  }
+
+  /* ===== HEADER ===== */
+  .header {
+    background: linear-gradient(135deg, #1a73e8, #0d47a1);
+    color: #fff;
+    padding: 20px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 2px 20px rgba(0,0,0,0.15);
+  }
+  .header-logo {
+    font-size: 24px;
+    font-weight: 900;
+    letter-spacing: 2px;
+  }
+  .header-logo span { color: #a0d4ff; }
+  .header-nav {
+    display: flex;
+    gap: 25px;
+    font-size: 14px;
+  }
+  .header-nav a {
+    color: rgba(255,255,255,0.8);
+    text-decoration: none;
+    cursor: pointer;
+    transition: color 0.2s;
+  }
+  .header-nav a:hover { color: #fff; }
+  .header-nav a.active { color: #fff; font-weight: 700; border-bottom: 2px solid #fff; padding-bottom: 2px; }
+
+  /* ===== MAIN ===== */
+  .main {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 30px 20px;
+  }
+
+  /* ===== STEP INDICATOR ===== */
+  .steps-bar {
+    display: flex;
+    justify-content: center;
+    gap: 0;
+    margin-bottom: 35px;
+  }
+  .step-item {
+    display: flex;
+    align-items: center;
+    gap: 0;
+  }
+  .step-circle {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: #ddd;
+    color: #999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 16px;
+    transition: all 0.3s;
+  }
+  .step-circle.active {
+    background: #1a73e8;
+    color: #fff;
+    box-shadow: 0 3px 12px rgba(26,115,232,0.4);
+  }
+  .step-circle.done {
+    background: #4caf50;
+    color: #fff;
+  }
+  .step-label {
+    margin-left: 8px;
+    font-size: 13px;
+    color: #999;
+    font-weight: 500;
+    transition: color 0.3s;
+  }
+  .step-label.active { color: #1a73e8; font-weight: 700; }
+  .step-label.done { color: #4caf50; }
+  .step-line {
+    width: 60px;
+    height: 3px;
+    background: #ddd;
+    margin: 0 15px;
+    border-radius: 2px;
+    transition: background 0.3s;
+  }
+  .step-line.done { background: #4caf50; }
+
+  /* ===== PANELS ===== */
+  .panel {
+    display: none;
+    animation: fadeIn 0.4s ease;
+  }
+  .panel.active { display: block; }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(15px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ===== SEARCH PANEL ===== */
+  .search-card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 35px 40px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    margin-bottom: 25px;
+  }
+  .search-card h2 {
+    font-size: 22px;
+    margin-bottom: 25px;
+    color: #1a73e8;
+  }
+
+  .form-row {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 20px;
+    align-items: flex-end;
+  }
+  .form-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  .form-group label {
+    font-size: 13px;
+    font-weight: 700;
+    color: #555;
+    margin-bottom: 6px;
+    letter-spacing: 0.5px;
+  }
+  .form-group input,
+  .form-group select {
+    padding: 12px 14px;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    font-size: 15px;
+    font-family: 'Noto Sans JP', sans-serif;
+    transition: border-color 0.3s;
+    background: #fafafa;
+  }
+  .form-group input:focus,
+  .form-group select:focus {
+    outline: none;
+    border-color: #1a73e8;
+    background: #fff;
+  }
+
+  .swap-btn {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    border: 2px solid #1a73e8;
+    background: #fff;
+    color: #1a73e8;
+    font-size: 20px;
+    cursor: pointer;
+    transition: all 0.3s;
+    flex-shrink: 0;
+    margin-bottom: 0;
+  }
+  .swap-btn:hover {
+    background: #1a73e8;
+    color: #fff;
+  }
+
+  .transport-tabs {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .transport-tab {
+    padding: 10px 24px;
+    border: 2px solid #e0e0e0;
+    border-radius: 25px;
+    background: #fff;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s;
+    font-family: 'Noto Sans JP', sans-serif;
+  }
+  .transport-tab:hover { border-color: #1a73e8; }
+  .transport-tab.active {
+    background: #1a73e8;
+    color: #fff;
+    border-color: #1a73e8;
+  }
+
+  .search-btn {
+    background: linear-gradient(135deg, #1a73e8, #0d47a1);
+    color: #fff;
+    border: none;
+    padding: 14px 50px;
+    border-radius: 30px;
+    font-size: 17px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: 'Noto Sans JP', sans-serif;
+    transition: all 0.3s;
+    box-shadow: 0 4px 15px rgba(26,115,232,0.3);
+    width: 100%;
+    margin-top: 10px;
+  }
+  .search-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 25px rgba(26,115,232,0.4);
+  }
+
+  /* ===== RESULTS PANEL ===== */
+  .results-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  .results-header h2 { font-size: 20px; color: #333; }
+  .results-summary { font-size: 14px; color: #777; }
+  .back-link {
+    color: #1a73e8;
+    cursor: pointer;
+    font-size: 14px;
+    text-decoration: underline;
+  }
+
+  .result-card {
+    background: #fff;
+    border-radius: 14px;
+    padding: 25px 30px;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    display: flex;
+    align-items: center;
+    gap: 25px;
+    cursor: pointer;
+    transition: all 0.3s;
+    border: 2px solid transparent;
+  }
+  .result-card:hover {
+    border-color: #1a73e8;
+    box-shadow: 0 4px 20px rgba(26,115,232,0.15);
+    transform: translateY(-2px);
+  }
+  .result-card.selected {
+    border-color: #1a73e8;
+    background: #f0f7ff;
+  }
+
+  .result-type {
+    width: 60px; height: 60px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 30px;
+    flex-shrink: 0;
+  }
+  .result-type.shinkansen { background: #e3f2fd; }
+  .result-type.bus { background: #e8f5e9; }
+  .result-type.plane { background: #fce4ec; }
+
+  .result-info { flex: 1; }
+  .result-name {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .result-detail {
+    font-size: 13px;
+    color: #777;
+  }
+
+  .result-time {
+    text-align: center;
+    min-width: 200px;
+  }
+  .time-display {
+    font-size: 24px;
+    font-weight: 900;
+    color: #333;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+  .time-arrow { color: #aaa; font-size: 18px; }
+  .duration {
+    font-size: 12px;
+    color: #1a73e8;
+    background: #e3f2fd;
+    padding: 3px 10px;
+    border-radius: 10px;
+    margin-top: 5px;
+    display: inline-block;
+  }
+
+  .result-price {
+    text-align: right;
+    min-width: 130px;
+  }
+  .price-amount {
+    font-size: 26px;
+    font-weight: 900;
+    color: #e65100;
+  }
+  .price-unit { font-size: 14px; color: #999; }
+  .seat-info {
+    font-size: 12px;
+    color: #4caf50;
+    margin-top: 4px;
+  }
+  .seat-info.few { color: #f44336; }
+
+  .select-btn {
+    background: #1a73e8;
+    color: #fff;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: 'Noto Sans JP', sans-serif;
+    transition: all 0.3s;
+    white-space: nowrap;
+  }
+  .select-btn:hover { background: #0d47a1; }
+
+  /* ===== PASSENGER PANEL ===== */
+  .passenger-card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 35px 40px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    margin-bottom: 20px;
+  }
+  .passenger-card h2 {
+    font-size: 20px;
+    margin-bottom: 25px;
+    color: #1a73e8;
+  }
+
+  .selected-summary {
+    background: #f0f7ff;
+    border: 1px solid #c2deff;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 25px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+  .selected-summary .emoji { font-size: 36px; }
+  .selected-summary .info h3 { font-size: 16px; color: #333; }
+  .selected-summary .info p { font-size: 13px; color: #777; margin-top: 3px; }
+  .selected-summary .price-tag {
+    margin-left: auto;
+    font-size: 22px;
+    font-weight: 900;
+    color: #e65100;
+  }
+
+  .form-section {
+    margin-bottom: 25px;
+  }
+  .form-section h3 {
+    font-size: 16px;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 15px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #f0f0f0;
+  }
+
+  .checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 15px;
+    font-size: 14px;
+  }
+  .checkbox-group input[type="checkbox"] {
+    width: 18px; height: 18px;
+    cursor: pointer;
+  }
+
+  .nav-buttons {
+    display: flex;
+    gap: 15px;
+    margin-top: 30px;
+  }
+  .btn-back {
+    background: #fff;
+    color: #1a73e8;
+    border: 2px solid #1a73e8;
+    padding: 14px 40px;
+    border-radius: 30px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: 'Noto Sans JP', sans-serif;
+    transition: all 0.3s;
+  }
+  .btn-back:hover { background: #f0f7ff; }
+  .btn-next {
+    background: linear-gradient(135deg, #1a73e8, #0d47a1);
+    color: #fff;
+    border: none;
+    padding: 14px 40px;
+    border-radius: 30px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: 'Noto Sans JP', sans-serif;
+    transition: all 0.3s;
+    flex: 1;
+    box-shadow: 0 4px 15px rgba(26,115,232,0.3);
+  }
+  .btn-next:hover { transform: translateY(-2px); }
+  .btn-next:disabled {
+    background: #ccc;
+    box-shadow: none;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  /* ===== PAYMENT PANEL ===== */
+  .payment-methods {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 25px;
+  }
+  .payment-method {
+    flex: 1;
+    padding: 18px;
+    border: 2px solid #e0e0e0;
+    border-radius: 12px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    background: #fff;
+  }
+  .payment-method:hover { border-color: #1a73e8; }
+  .payment-method.active {
+    border-color: #1a73e8;
+    background: #f0f7ff;
+  }
+  .payment-method .pm-icon { font-size: 30px; display: block; margin-bottom: 8px; }
+  .payment-method .pm-label { font-size: 13px; font-weight: 700; }
+
+  .card-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+  }
+  .card-form .full-width { grid-column: 1 / -1; }
+
+  /* ===== CONFIRM PANEL ===== */
+  .confirm-card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 35px 40px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    margin-bottom: 20px;
+  }
+  .confirm-card h2 {
+    font-size: 20px;
+    margin-bottom: 25px;
+    color: #1a73e8;
+  }
+
+  .confirm-section {
+    border-bottom: 1px solid #f0f0f0;
+    padding: 18px 0;
+  }
+  .confirm-section:last-child { border-bottom: none; }
+  .confirm-section h3 {
+    font-size: 14px;
+    color: #999;
+    margin-bottom: 10px;
+    font-weight: 500;
+  }
+  .confirm-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 15px;
+    margin-bottom: 6px;
+  }
+  .confirm-row .label { color: #666; }
+  .confirm-row .value { font-weight: 700; }
+
+  .total-box {
+    background: linear-gradient(135deg, #1a73e8, #0d47a1);
+    border-radius: 14px;
+    padding: 25px 30px;
+    color: #fff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 25px 0;
+  }
+  .total-box .total-label { font-size: 18px; font-weight: 500; }
+  .total-box .total-amount { font-size: 36px; font-weight: 900; }
+
+  .confirm-btn {
+    background: linear-gradient(135deg, #e65100, #ff6d00);
+    color: #fff;
+    border: none;
+    padding: 18px;
+    border-radius: 30px;
+    font-size: 18px;
+    font-weight: 900;
+    cursor: pointer;
+    font-family: 'Noto Sans JP', sans-serif;
+    width: 100%;
+    transition: all 0.3s;
+    box-shadow: 0 4px 20px rgba(230,81,0,0.3);
+    letter-spacing: 2px;
+  }
+  .confirm-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 30px rgba(230,81,0,0.4);
+  }
+
+  /* ===== COMPLETE PANEL ===== */
+  .complete-card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 60px 40px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    text-align: center;
+  }
+  .complete-icon {
+    width: 100px; height: 100px;
+    background: #4caf50;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 25px;
+    font-size: 50px;
+    color: #fff;
+    animation: bounceIn 0.6s ease;
+  }
+  @keyframes bounceIn {
+    0% { transform: scale(0); }
+    60% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+  }
+  .complete-card h2 {
+    font-size: 28px;
+    color: #333;
+    margin-bottom: 10px;
+  }
+  .complete-card .booking-id {
+    font-size: 16px;
+    color: #777;
+    margin-bottom: 30px;
+  }
+  .complete-card .booking-id strong {
+    color: #1a73e8;
+    font-size: 20px;
+  }
+
+  .ticket-preview {
+    background: linear-gradient(135deg, #f8f9fa, #e8edf2);
+    border: 2px dashed #ccc;
+    border-radius: 16px;
+    padding: 30px;
+    margin: 25px auto;
+    max-width: 500px;
+    text-align: left;
+  }
+  .ticket-preview h3 {
+    text-align: center;
+    font-size: 16px;
+    color: #1a73e8;
+    margin-bottom: 15px;
+  }
+  .ticket-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px dotted #ddd;
+    font-size: 14px;
+  }
+  .ticket-row:last-child { border-bottom: none; }
+
+  .complete-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    margin-top: 30px;
+  }
+  .complete-actions button {
+    padding: 12px 30px;
+    border-radius: 25px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: 'Noto Sans JP', sans-serif;
+    transition: all 0.3s;
+  }
+  .btn-print {
+    background: #fff;
+    color: #1a73e8;
+    border: 2px solid #1a73e8;
+  }
+  .btn-new {
+    background: #1a73e8;
+    color: #fff;
+    border: none;
+  }
+
+  /* ===== LOADING ===== */
+  .loading-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+  }
+  .loading-overlay.show { display: flex; }
+  .loading-box {
+    background: #fff;
+    border-radius: 20px;
+    padding: 40px 50px;
+    text-align: center;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+  }
+  .spinner {
+    width: 50px; height: 50px;
+    border: 4px solid #e0e0e0;
+    border-top-color: #1a73e8;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 20px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ===== TOAST ===== */
+  .toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #333;
+    color: #fff;
+    padding: 14px 24px;
+    border-radius: 12px;
+    font-size: 14px;
+    z-index: 2000;
+    opacity: 0;
+    transform: translateX(100px);
+    transition: all 0.4s;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  .toast.success { background: #4caf50; }
+  .toast.error { background: #f44336; }
+
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 768px) {
+    .form-row { flex-direction: column; }
+    .result-card { flex-direction: column; text-align: center; }
+    .result-time, .result-price { min-width: auto; }
+    .card-form { grid-template-columns: 1fr; }
+    .card-form .full-width { grid-column: 1; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-logo">🚄 Travel<span>Book</span></div>
+  <div class="header-nav">
+    <a class="active">交通予約</a>
+    <a>予約確認</a>
+    <a>マイページ</a>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- STEP INDICATOR -->
+  <div class="steps-bar">
+    <div class="step-item">
+      <div class="step-circle active" id="sc1">1</div>
+      <span class="step-label active" id="sl1">検索</span>
+    </div>
+    <div class="step-line" id="line1"></div>
+    <div class="step-item">
+      <div class="step-circle" id="sc2">2</div>
+      <span class="step-label" id="sl2">選択</span>
+    </div>
+    <div class="step-line" id="line2"></div>
+    <div class="step-item">
+      <div class="step-circle" id="sc3">3</div>
+      <span class="step-label" id="sl3">情報入力</span>
+    </div>
+    <div class="step-line" id="line3"></div>
+    <div class="step-item">
+      <div class="step-circle" id="sc4">4</div>
+      <span class="step-label" id="sl4">お支払い</span>
+    </div>
+    <div class="step-line" id="line4"></div>
+    <div class="step-item">
+      <div class="step-circle" id="sc5">5</div>
+      <span class="step-label" id="sl5">完了</span>
+    </div>
+  </div>
+
+  <!-- PANEL 1: SEARCH -->
+  <div class="panel active" id="panel1">
+    <div class="search-card">
+      <h2>🔍 交通手段を検索</h2>
+
+      <div class="transport-tabs">
+        <div class="transport-tab active" data-type="all" onclick="setTransport(this)">🔄 すべて</div>
+        <div class="transport-tab" data-type="shinkansen" onclick="setTransport(this)">🚄 新幹線</div>
+        <div class="transport-tab" data-type="bus" onclick="setTransport(this)">🚌 高速バス</div>
+        <div class="transport-tab" data-type="plane" onclick="setTransport(this)">✈️ 飛行機</div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>出発地</label>
+          <select id="fromStation">
+            <option value="梅田">大阪（梅田）</option>
+            <option value="新大阪">新大阪</option>
+            <option value="なんば">なんば</option>
+            <option value="京都">京都</option>
+            <option value="三ノ宮">三ノ宮（神戸）</option>
+            <option value="名古屋">名古屋</option>
+          </select>
+        </div>
+        <button class="swap-btn" onclick="swapStations()">⇄</button>
+        <div class="form-group">
+          <label>到着地</label>
+          <select id="toStation">
+            <option value="東京">東京</option>
+            <option value="品川">品川</option>
+            <option value="新宿">新宿（バスタ）</option>
+            <option value="池袋">池袋</option>
+            <option value="横浜">横浜</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>出発日</label>
+          <input type="date" id="departDate">
+        </div>
+        <div class="form-group">
+          <label>出発時刻</label>
+          <select id="departTime">
+            <option value="06:00">06:00以降</option>
+            <option value="08:00">08:00以降</option>
+            <option value="10:00">10:00以降</option>
+            <option value="12:00">12:00以降</option>
+            <option value="14:00">14:00以降</option>
+            <option value="16:00">16:00以降</option>
+            <option value="18:00">18:00以降</option>
+            <option value="19:00">19:00以降</option>
+            <option value="19:30" selected>19:30以降</option>
+            <option value="20:00">20:00以降</option>
+            <option value="21:00">21:00以降</option>
+            <option value="22:00">22:00以降</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>人数</label>
+          <select id="passengers">
+            <option value="1" selected>大人 1名</option>
+            <option value="2">大人 2名</option>
+            <option value="3">大人 3名</option>
+            <option value="4">大人 4名</option>
+          </select>
+        </div>
+      </div>
+
+      <button class="search-btn" onclick="searchRoutes()">🔍 検索する</button>
+    </div>
+  </div>
+
+  <!-- PANEL 2: RESULTS -->
+  <div class="panel" id="panel2">
+    <div class="results-header">
+      <div>
+        <h2 id="resultsTitle">検索結果</h2>
+        <span class="results-summary" id="resultsSummary"></span>
+      </div>
+      <span class="back-link" onclick="goToStep(1)">← 条件を変更</span>
+    </div>
+    <div id="resultsContainer"></div>
+  </div>
+
+  <!-- PANEL 3: PASSENGER INFO -->
+  <div class="panel" id="panel3">
+    <div class="passenger-card">
+      <h2>👤 予約者情報</h2>
+
+      <div class="selected-summary" id="selectedSummary"></div>
+
+      <div class="form-section">
+        <h3>基本情報</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>姓</label>
+            <input type="text" id="lastName" placeholder="山田">
+          </div>
+          <div class="form-group">
+            <label>名</label>
+            <input type="text" id="firstName" placeholder="太郎">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>セイ（カタカナ）</label>
+            <input type="text" id="lastNameKana" placeholder="ヤマダ">
+          </div>
+          <div class="form-group">
+            <label>メイ（カタカナ）</label>
+            <input type="text" id="firstNameKana" placeholder="タロウ">
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <h3>連絡先</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>メールアドレス</label>
+            <input type="email" id="email" placeholder="example@email.com">
+          </div>
+          <div class="form-group">
+            <label>電話番号</label>
+            <input type="tel" id="phone" placeholder="090-1234-5678">
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <h3>座席の希望</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>座席タイプ</label>
+            <select id="seatType">
+              <option value="指定席">指定席</option>
+              <option value="自由席">自由席</option>
+              <option value="グリーン席">グリーン席</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>座席位置の希望</label>
+            <select id="seatPosition">
+              <option value="指定なし">指定なし</option>
+              <option value="窓側">窓側</option>
+              <option value="通路側">通路側</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="nav-buttons">
+        <button class="btn-back" onclick="goToStep(2)">← 戻る</button>
+        <button class="btn-next" onclick="goToPayment()">お支払いへ進む →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PANEL 4: PAYMENT -->
+  <div class="panel" id="panel4">
+    <div class="passenger-card">
+      <h2>💳 お支払い情報</h2>
+
+      <div class="selected-summary" id="paymentSummary"></div>
+
+      <div class="form-section">
+        <h3>お支払い方法</h3>
+        <div class="payment-methods">
+          <div class="payment-method active" onclick="selectPayment(this, 'credit')">
+            <span class="pm-icon">💳</span>
+            <span class="pm-label">クレジットカード</span>
+          </div>
+          <div class="payment-method" onclick="selectPayment(this, 'convenience')">
+            <span class="pm-icon">🏪</span>
+            <span class="pm-label">コンビニ払い</span>
+          </div>
+          <div class="payment-method" onclick="selectPayment(this, 'paypay')">
+            <span class="pm-icon">📱</span>
+            <span class="pm-label">PayPay</span>
+          </div>
+          <div class="payment-method" onclick="selectPayment(this, 'bank')">
+            <span class="pm-icon">🏦</span>
+            <span class="pm-label">銀行振込</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section" id="creditCardForm">
+        <h3>カード情報</h3>
+        <div class="card-form">
+          <div class="form-group full-width">
+            <label>カード番号</label>
+            <input type="text" id="cardNumber" placeholder="1234 5678 9012 3456" maxlength="19">
+          </div>
+          <div class="form-group">
+            <label>有効期限</label>
+            <input type="text" id="cardExpiry" placeholder="MM/YY" maxlength="5">
+          </div>
+          <div class="form-group">
+            <label>セキュリティコード</label>
+            <input type="text" id="cardCvc" placeholder="123" maxlength="4">
+          </div>
+          <div class="form-group full-width">
+            <label>カード名義（ローマ字）</label>
+            <input type="text" id="cardName" placeholder="TARO YAMADA" style="text-transform:uppercase;">
+          </div>
+        </div>
+      </div>
+
+      <div class="nav-buttons">
+        <button class="btn-back" onclick="goToStep(3)">← 戻る</button>
+        <button class="btn-next" onclick="goToConfirm()">確認画面へ →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PANEL 5: CONFIRM -->
+  <div class="panel" id="panel5">
+    <div class="confirm-card">
+      <h2>📋 予約内容の確認</h2>
+
+      <div class="confirm-section">
+        <h3>交通手段</h3>
+        <div id="confirmRoute"></div>
+      </div>
+
+      <div class="confirm-section">
+        <h3>予約者情報</h3>
+        <div id="confirmPassenger"></div>
+      </div>
+
+      <div class="confirm-section">
+        <h3>お支払い</h3>
+        <div id="confirmPayment"></div>
+      </div>
+
+      <div class="total-box">
+        <span class="total-label">お支払い合計（税込）</span>
+        <span class="total-amount" id="confirmTotal"></span>
+      </div>
+
+      <div class="checkbox-group">
+        <input type="checkbox" id="agreeTerms">
+        <label for="agreeTerms">利用規約およびキャンセルポリシーに同意します</label>
+      </div>
+
+      <div class="nav-buttons" style="margin-top:20px;">
+        <button class="btn-back" onclick="goToStep(4)">← 戻る</button>
+        <button class="confirm-btn" onclick="completeBooking()" id="bookBtn" disabled>予約を確定する</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PANEL 6: COMPLETE -->
+  <div class="panel" id="panel6">
+    <div class="complete-card">
+      <div class="complete-icon">✓</div>
+      <h2>ご予約が完了しました！</h2>
+      <p class="booking-id">予約番号: <strong id="bookingNumber"></strong></p>
+      <p style="color:#777; font-size:14px; margin-bottom:20px;">確認メールを送信しました。</p>
+
+      <div class="ticket-preview" id="ticketPreview"></div>
+
+      <div class="complete-actions">
+        <button class="btn-print" onclick="window.print()">🖨️ 印刷する</button>
+        <button class="btn-new" onclick="resetAll()">🔍 新しい検索</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- LOADING OVERLAY -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-box">
+    <div class="spinner"></div>
+    <p id="loadingText">検索中...</p>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== STATE =====
+let state = {
+  transportFilter: 'all',
+  selectedRoute: null,
+  paymentMethod: 'credit'
+};
+
+// ===== INIT =====
+(function init() {
+  const today = new Date();
+  const dateStr = today.toISOString().split('T')[0];
+  document.getElementById('departDate').value = dateStr;
+
+  document.getElementById('agreeTerms').addEventListener('change', function() {
+    document.getElementById('bookBtn').disabled = !this.checked;
+  });
+
+  // Card number formatting
+  document.getElementById('cardNumber').addEventListener('input', function(e) {
+    let v = e.target.value.replace(/\D/g, '').substring(0, 16);
+    e.target.value = v.replace(/(\d{4})(?=\d)/g, '$1 ');
+  });
+  document.getElementById('cardExpiry').addEventListener('input', function(e) {
+    let v = e.target.value.replace(/\D/g, '').substring(0, 4);
+    if (v.length >= 2) v = v.substring(0,2) + '/' + v.substring(2);
+    e.target.value = v;
+  });
+})();
+
+// ===== ROUTES DATABASE =====
+function generateRoutes(from, to, date, time) {
+  const baseTime = parseInt(time.split(':')[0]);
+  const routes = [];
+
+  // Shinkansen
+  const shinkansenTimes = [
+    { dep: '19:33', arr: '22:03', name: 'のぞみ255号', dur: '2時間30分', price: 14420 },
+    { dep: '19:51', arr: '22:21', name: 'のぞみ257号', dur: '2時間30分', price: 14420 },
+    { dep: '20:09', arr: '22:36', name: 'のぞみ259号', dur: '2時間27分', price: 14420 },
+    { dep: '20:30', arr: '23:00', name: 'のぞみ261号', dur: '2時間30分', price: 14420 },
+    { dep: '20:51', arr: '23:18', name: 'のぞみ265号', dur: '2時間27分', price: 14420 },
+    { dep: '21:23', arr: '23:45', name: 'のぞみ269号（最終）', dur: '2時間22分', price: 14420 },
+  ];
+
+  shinkansenTimes.forEach(t => {
+    const depH = parseInt(t.dep.split(':')[0]);
+    if (depH >= baseTime || (depH === baseTime - 1 && parseInt(t.dep.split(':')[1]) >= 30)) {
+      const seats = Math.floor(Math.random() * 80) + 10;
+      routes.push({
+        type: 'shinkansen',
+        icon: '🚄',
+        name: t.name,
+        detail: `東海道新幹線 ${from === '梅田' ? '新大阪' : from} → ${to}`,
+        depTime: t.dep,
+        arrTime: t.arr,
+        duration: t.dur,
+        price: t.price,
+        seats: seats,
+        seatLabel: seats < 20 ? `残り${seats}席` : '空席あり',
+        seatFew: seats < 20
+      });
+    }
+  });
+
+  // Night bus
+  const busTimes = [
+    { dep: '21:00', arr: '翌05:30', name: 'ドリーム大阪号', dur: '約8時間30分', price: 4800, detail: '4列シート / トイレ付' },
+    { dep: '21:30', arr: '翌06:00', name: 'プレミアムドリーム', dur: '約8時間30分', price: 7200, detail: '3列独立シート / トイレ付' },
+    { dep: '22:00', arr: '翌06:15', name: 'グランドリーム号', dur: '約8時間15分', price: 5500, detail: '4列ワイドシート / Wi-Fi' },
+    { dep: '22:30', arr: '翌06:45', name: 'VIPライナー', dur: '約8時間15分', price: 3980, detail: '4列シート / ブランケット付' },
+    { dep: '23:00', arr: '翌07:00', name: 'さくら高速バス', dur: '約8時間', price: 4480, detail: '4列シート / コンセント付' },
+    { dep: '23:30', arr: '翌07:30', name: 'WILLER EXPRESS', dur: '約8時間', price: 6800, detail: 'リラックス3列 / Wi-Fi' },
+    { dep: '23:50', arr: '翌08:10', name: 'ナイトライナー', dur: '約8時間20分', price: 3500, detail: '4列スタンダード' },
+  ];
+
+  busTimes.forEach(t => {
+    const depH = parseInt(t.dep.split(':')[0]);
+    if (depH >= baseTime) {
+      const seats = Math.floor(Math.random() * 15) + 2;
+      routes.push({
+        type: 'bus',
+        icon: '🚌',
+        name: t.name,
+        detail: `高速バス ${from} → ${to} / ${t.detail}`,
+        depTime: t.dep,
+        arrTime: t.arr,
+        duration: t.dur,
+        price: t.price,
+        seats: seats,
+        seatLabel: seats < 5 ? `残り${seats}席！` : `残り${seats}席`,
+        seatFew: seats < 5
+      });
+    }
+  });
+
+  // Plane (limited)
+  if (baseTime <= 20) {
+    routes.push({
+      type: 'plane',
+      icon: '✈️',
+      name: 'ANA 39便',
+      detail: `伊丹空港(ITM) → 羽田空港(HND)`,
+      depTime: '20:10',
+      arrTime: '21:25',
+      duration: '1時間15分',
+      price: 22800,
+      seats: 8,
+      seatLabel: '残り8席',
+      seatFew: true
+    });
+  }
+
+  return routes;
+}
+
+// ===== FUNCTIONS =====
+function setTransport(el) {
+  document.querySelectorAll('.transport-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  state.transportFilter = el.dataset.type;
+}
+
+function swapStations() {
+  const from = document.getElementById('fromStation');
+  const to = document.getElementById('toStation');
+  const fv = from.value, tv = to.value;
+
+  // Find matching options
+  const fromOpts = Array.from(from.options).map(o => o.value);
+  const toOpts = Array.from(to.options).map(o => o.value);
+
+  if (toOpts.includes(fv) && fromOpts.includes(tv)) {
+    from.value = tv;
+    to.value = fv;
+  } else {
+    showToast('この組み合わせは入れ替えできません', 'error');
+  }
+}
+
+function searchRoutes() {
+  const from = document.getElementById('fromStation').value;
+  const to = document.getElementById('toStation').value;
+  const date = document.getElementById('departDate').value;
+  const time = document.getElementById('departTime').value;
+  const pax = document.getElementById('passengers').value;
+
+  showLoading('最適なルートを検索中...');
+
+  setTimeout(() => {
+    let routes = generateRoutes(from, to, date, time);
+
+    if (state.transportFilter !== 'all') {
+      routes = routes.filter(r => r.type === state.transportFilter);
+    }
+
+    // Sort by departure time
+    routes.sort((a, b) => a.depTime.localeCompare(b.depTime));
+
+    renderResults(routes, from, to, date, pax);
+    hideLoading();
+    goToStep(2);
+  }, 1200);
+}
+
+function renderResults(routes, from, to, date, pax) {
+  const container = document.getElementById('resultsContainer');
+  const dateObj = new Date(date);
+  const dateStr = `${dateObj.getMonth()+1}月${dateObj.getDate()}日`;
+
+  document.getElementById('resultsTitle').textContent = `${from} → ${to}`;
+  document.getElementById('resultsSummary').textContent =
+    `${dateStr} / ${routes.length}件の候補 / ${pax}名`;
+
+  container.innerHTML = routes.map((r, i) => `
+    <div class="result-card" onclick="selectRoute(${i})" id="route${i}">
+      <div class="result-type ${r.type}">${r.icon}</div>
+      <div class="result-info">
+        <div class="result-name">${r.name}</div>
+        <div class="result-detail">${r.detail}</div>
+      </div>
+      <div class="result-time">
+        <div class="time-display">
+          ${r.depTime} <span class="time-arrow">→</span> ${r.arrTime}
+        </div>
+        <span class="duration">${r.duration}</span>
+      </div>
+      <div class="result-price">
+        <div class="price-amount">¥${r.price.toLocaleString()}</div>
+        <div class="price-unit">/ 1名</div>
+        <div class="seat-info ${r.seatFew ? 'few' : ''}">${r.seatLabel}</div>
+      </div>
+      <button class="select-btn" onclick="event.stopPropagation(); selectAndNext(${i})">選択</button>
+    </div>
+  `).join('');
+
+  // Save routes to state
+  state.routes = routes;
+  state.pax = parseInt(pax);
+  state.date = date;
+  state.from = from;
+  state.to = to;
+}
+
+function selectRoute(index) {
+  document.querySelectorAll('.result-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('route' + index).classList.add('selected');
+  state.selectedRoute = state.routes[index];
+}
+
+function selectAndNext(index) {
+  state.selectedRoute = state.routes[index];
+  goToStep(3);
+  renderSelectedSummary();
+}
+
+function renderSelectedSummary() {
+  const r = state.selectedRoute;
+  if (!r) return;
+  const total = r.price * state.pax;
+  const html = `
+    <span class="emoji">${r.icon}</span>
+    <div class="info">
+      <h3>${r.name}</h3>
+      <p>${r.depTime} → ${r.arrTime} (${r.duration}) / ${state.pax}名</p>
+    </div>
+    <div class="price-tag">¥${total.toLocaleString()}</div>
+  `;
+  document.getElementById('selectedSummary').innerHTML = html;
+  const ps = document.getElementById('paymentSummary');
+  if (ps) ps.innerHTML = html;
+}
+
+function goToPayment() {
+  // Validate
+  const fields = ['lastName','firstName','lastNameKana','firstNameKana','email','phone'];
+  let valid = true;
+  fields.forEach(f => {
+    const el = document.getElementById(f);
+    if (!el.value.trim()) {
+      el.style.borderColor = '#f44336';
+      valid = false;
+    } else {
+      el.style.borderColor = '#e0e0e0';
+    }
+  });
+  if (!valid) {
+    showToast('必須項目を入力してください', 'error');
+    return;
+  }
+  goToStep(4);
+  renderSelectedSummary();
+}
+
+function selectPayment(el, method) {
+  document.querySelectorAll('.payment-method').forEach(m => m.classList.remove('active'));
+  el.classList.add('active');
+  state.paymentMethod = method;
+  document.getElementById('creditCardForm').style.display =
+    method === 'credit' ? 'block' : 'none';
+}
+
+function goToConfirm() {
+  if (state.paymentMethod === 'credit') {
+    const cn = document.getElementById('cardNumber').value.replace(/\s/g, '');
+    if (cn.length < 16) {
+      showToast('カード番号を入力してください', 'error');
+      return;
+    }
+  }
+
+  goToStep(5);
+  renderConfirmation();
+}
+
+function renderConfirmation() {
+  const r = state.selectedRoute;
+  const dateObj = new Date(state.date);
+  const dateStr = `${dateObj.getFullYear()}年${dateObj.getMonth()+1}月${dateObj.getDate()}日`;
+  const total = r.price * state.pax;
+
+  document.getElementById('confirmRoute').innerHTML = `
+    <div class="confirm-row"><span class="label">交通手段</span><span class="value">${r.icon} ${r.name}</span></div>
+    <div class="confirm-row"><span class="label">区間</span><span class="value">${state.from} → ${state.to}</span></div>
+    <div class="confirm-row"><span class="label">日時</span><span class="value">${dateStr} ${r.depTime} → ${r.arrTime}</span></div>
+    <div class="confirm-row"><span class="label">所要時間</span><span class="value">${r.duration}</span></div>
+    <div class="confirm-row"><span class="label">人数</span><span class="value">${state.pax}名</span></div>
+    <div class="confirm-row"><span class="label">座席</span><span class="value">${document.getElementById('seatType').value} / ${document.getElementById('seatPosition').value}</span></div>
+  `;
+
+  document.getElementById('confirmPassenger').innerHTML = `
+    <div class="confirm-row"><span class="label">氏名</span><span class="value">${document.getElementById('lastName').value} ${document.getElementById('firstName').value}</span></div>
+    <div class="confirm-row"><span class="label">フリガナ</span><span class="value">${document.getElementById('lastNameKana').value} ${document.getElementById('firstNameKana').value}</span></div>
+    <div class="confirm-row"><span class="label">メール</span><span class="value">${document.getElementById('email').value}</span></div>
+    <div class="confirm-row"><span class="label">電話番号</span><span class="value">${document.getElementById('phone').value}</span></div>
+  `;
+
+  const payLabels = { credit: 'クレジットカード', convenience: 'コンビニ払い', paypay: 'PayPay', bank: '銀行振込' };
+  let payDetail = payLabels[state.paymentMethod];
+  if (state.paymentMethod === 'credit') {
+    const cn = document.getElementById('cardNumber').value;
+    payDetail += ` (**** ${cn.slice(-4)})`;
+  }
+
+  document.getElementById('confirmPayment').innerHTML = `
+    <div class="confirm-row"><span class="label">お支払い方法</span><span class="value">${payDetail}</span></div>
+    <div class="confirm-row"><span class="label">単価</span><span class="value">¥${r.price.toLocaleString()} × ${state.pax}名</span></div>
+  `;
+
+  document.getElementById('confirmTotal').textContent = `¥${total.toLocaleString()}`;
+}
+
+function completeBooking() {
+  showLoading('予約を処理しています...');
+
+  setTimeout(() => {
+    hideLoading();
+
+    const bookingId = 'TB' + Date.now().toString().slice(-8) + Math.floor(Math.random()*100);
+    document.getElementById('bookingNumber').textContent = bookingId;
+
+    const r = state.selectedRoute;
+    const dateObj = new Date(state.date);
+    const dateStr = `${dateObj.getFullYear()}年${dateObj.getMonth()+1}月${dateObj.getDate()}日`;
+    const total = r.price * state.pax;
+
+    document.getElementById('ticketPreview').innerHTML = `
+      <h3>🎫 e-チケット</h3>
+      <div class="ticket-row"><span>予約番号</span><strong>${bookingId}</strong></div>
+      <div class="ticket-row"><span>交通手段</span><span>${r.icon} ${r.name}</span></div>
+      <div class="ticket-row"><span>区間</span><span>${state.from} → ${state.to}</span></div>
+      <div class="ticket-row"><span>日時</span><span>${dateStr} ${r.depTime}発</span></div>
+      <div class="ticket-row"><span>到着</span><span>${r.arrTime}</span></div>
+      <div class="ticket-row"><span>乗客</span><span>${document.getElementById('lastName').value} ${document.getElementById('firstName').value} 様 (${state.pax}名)</span></div>
+      <div class="ticket-row"><span>座席</span><span>${document.getElementById('seatType').value} / ${document.getElementById('seatPosition').value}</span></div>
+      <div class="ticket-row"><span style="font-weight:700;">合計金額</span><strong style="color:#e65100;">¥${total.toLocaleString()}</strong></div>
+    `;
+
+    goToStep(6);
+    showToast('予約が完了しました！', 'success');
+  }, 2000);
+}
+
+// ===== STEP NAVIGATION =====
+function goToStep(step) {
+  // Update panels
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel' + step).classList.add('active');
+
+  // Update step indicators
+  for (let i = 1; i <= 5; i++) {
+    const circle = document.getElementById('sc' + i);
+    const label = document.getElementById('sl' + i);
+    circle.classList.remove('active', 'done');
+    label.classList.remove('active', 'done');
+
+    if (i < step) {
+      circle.classList.add('done');
+      circle.textContent = '✓';
+      label.classList.add('done');
+    } else if (i === step || (step === 6 && i === 5)) {
+      circle.classList.add(step === 6 ? 'done' : 'active');
+      if (step === 6) circle.textContent = '✓';
+      label.classList.add(step === 6 ? 'done' : 'active');
+    } else {
+      circle.textContent = i;
+    }
+  }
+
+  // Update lines
+  for (let i = 1; i <= 4; i++) {
+    const line = document.getElementById('line' + i);
+    line.classList.toggle('done', i < step);
+  }
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ===== UI HELPERS =====
+function showLoading(text) {
+  document.getElementById('loadingText').textContent = text;
+  document.getElementById('loadingOverlay').classList.add('show');
+}
+function hideLoading() {
+  document.getElementById('loadingOverlay').classList.remove('show');
+}
+function showToast(msg, type) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.className = 'toast ' + type + ' show';
+  setTimeout(() => toast.classList.remove('show'), 3000);
+}
+function resetAll() {
+  state = { transportFilter: 'all', selectedRoute: null, paymentMethod: 'credit' };
+  document.querySelectorAll('input').forEach(i => {
+    if (i.type !== 'date') i.value = '';
+  });
+  document.getElementById('agreeTerms').checked = false;
+  document.getElementById('bookBtn').disabled = true;
+  goToStep(1);
+}
+</script>
+</body>
+</html>
